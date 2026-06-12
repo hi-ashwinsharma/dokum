@@ -3,7 +3,7 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { cn } from "@/lib/utils";
-import { X, GripVertical } from "lucide-react";
+import { X, GripVertical, Plus } from "lucide-react";
 
 interface PageItemProps {
   id: string;
@@ -57,7 +57,7 @@ export function PageItem({
         isDragging && "opacity-50 ring-2 ring-accent-blue"
       )}
     >
-      <div className="relative flex-1 bg-bg-surface-variant/40 overflow-hidden">
+      <div className="relative flex-1 bg-bg-surface-variant/40 flex items-center justify-center overflow-hidden">
         {thumbnailSrc ? (
           /* eslint-disable-next-line @next/next/no-img-element */
           <img 
@@ -80,24 +80,26 @@ export function PageItem({
               onRemove(id);
             }}
             onPointerDown={(e) => e.stopPropagation()}
-            className="absolute right-2 top-2 rounded-full bg-bg-surface/80 p-1.5 text-text-primary opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500 hover:text-white cursor-pointer shadow-sm"
+            className="absolute right-2 top-2 rounded-full bg-bg-surface/80 p-1.5 text-text-primary opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500 hover:text-white cursor-pointer shadow-sm z-10"
           >
             <X className="h-3.5 w-3.5" />
           </button>
         )}
 
         {action === "add" && (
-          <div className="absolute right-2 top-2 rounded-full bg-accent-blue/90 p-1 text-white opacity-0 group-hover:opacity-100 transition-opacity shadow-sm pointer-events-none">
-            <span className="text-[10px] font-bold px-1.5">+ ADD</span>
+          <div className="absolute inset-0 bg-black/15 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[1px] duration-200">
+            <div className="h-10 w-10 rounded-full bg-accent-blue text-white flex items-center justify-center shadow-md transform scale-90 group-hover:scale-100 transition-transform duration-200">
+              <Plus className="w-5 h-5 stroke-[2.5px]" />
+            </div>
           </div>
         )}
       </div>
 
-      <div className="flex h-10 items-center justify-between bg-bg-surface px-3 text-[11px] text-text-secondary">
-        <span className="truncate max-w-[90px]" title={fileName}>{fileName}</span>
-        <span className="font-mono bg-bg-surface-variant px-1.5 py-0.5 rounded text-[10px] font-semibold">p. {pageNumber}</span>
+      <div className="flex h-10 items-center justify-between bg-bg-surface px-2.5 text-[11px] text-text-secondary min-w-0">
+        <span className="truncate flex-1 pr-1.5" title={fileName}>{fileName}</span>
+        <span className="font-mono bg-bg-surface-variant px-1.5 py-0.5 rounded text-[9px] font-semibold shrink-0 whitespace-nowrap">p. {pageNumber}</span>
         {isDraggable && (
-          <div className="text-text-muted/50">
+          <div className="text-text-muted/50 shrink-0 ml-1.5">
             <GripVertical className="h-3.5 w-3.5" />
           </div>
         )}

@@ -31,6 +31,7 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
+  useDroppable,
 } from "@dnd-kit/core";
 import {
   arrayMove,
@@ -115,21 +116,46 @@ export default function Workspace({
     setSplitSelectedPages((prev) => prev.filter((p) => p.id !== id));
   };
 
-  const handleDragEndSplitTarget = (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
+  const { setNodeRef: setTargetDroppableRef } = useDroppable({
+    id: "split-target-container",
+  });
 
-    setSplitSelectedPages((prev) => {
-      const oldIndex = prev.findIndex((p) => p.id === active.id);
-      const newIndex = prev.findIndex((p) => p.id === over.id);
-      return arrayMove(prev, oldIndex, newIndex);
-    });
+  const handleDragEndSplit = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over) return;
+
+    const activeIdStr = String(active.id);
+    const overIdStr = String(over.id);
+
+    // Drop from left (source) to right (target)
+    if (activeIdStr.startsWith("source-")) {
+      if (overIdStr === "split-target-container" || overIdStr.startsWith("split-target-")) {
+        const page = allSourcePages.find((p) => p.id === active.id);
+        if (page) {
+          handleAddPageToSplit(page);
+        }
+      }
+      return;
+    }
+
+    // Re-ordering within the target card
+    if (activeIdStr.startsWith("split-target-") && overIdStr.startsWith("split-target-")) {
+      setSplitSelectedPages((prev) => {
+        const oldIndex = prev.findIndex((p) => p.id === active.id);
+        const newIndex = prev.findIndex((p) => p.id === over.id);
+        return arrayMove(prev, oldIndex, newIndex);
+      });
+    }
   };
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
@@ -582,42 +608,30 @@ export default function Workspace({
             )}
           </div>
         </div>
-      </div>
-
-      {/* Main Preview Workspace Grid */}
-      <section className="flex-1 bg-bg-surface p-4 rounded-container border border-border-subtle/10 shadow-soft_elevation flex flex-col min-w-0 h-full overflow-hidden">
-        <div className="flex items-center justify-between pb-3 border-b border-border-subtle/10 mb-4 gap-4 shrink-0">
-          <div>
-            <h2 className="text-sm font-bold text-text-primary flex items-center gap-2">
-              <span>Workspace Desk</span>
-              {virtualPages.length > 0 && (
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-bg-surface-variant font-bold text-text-secondary">
-                  {virtualPages.length} {virtualPages.length === 1 ? "Page" : "Pages"}
+      </div>      {/* Main Preview Workspace Grid / Split Desk Cards */}
+      {activeTool === "split" ? (
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEndSplit}
+        >
+          {/* Card A: Source Pages */}
+          <div className="flex-1 bg-bg-surface p-4 rounded-container border border-border-subtle/10 shadow-soft_elevation flex flex-col min-w-0 h-full overflow-hidden">
+            <div className="flex items-center justify-between pb-3 border-b border-border-subtle/10 mb-4 gap-4 shrink-0">
+              <h2 className="text-sm font-bold text-text-primary flex items-center gap-2">
+                <span>Source Pages</span>
+                <span className="text-[10px] bg-bg-surface-variant px-2 py-0.5 rounded font-mono text-text-secondary font-bold">
+                  {allSourcePages.length}
                 </span>
-              )}
-            </h2>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {/* Free period label */}
-            <div className="flex items-center gap-1 px-2.5 py-1 rounded-pill bg-bg-surface-variant border border-border-subtle/10 text-[10px] text-text-secondary">
-              <FileCheck className="w-3.5 h-3.5 text-accent-blue stroke-[1.5px]" />
-              <span className="hidden sm:inline">Free Period Enabled</span>
+              </h2>
             </div>
-          </div>
-        </div>
-
-        {/* Content canvas */}
-        <div className="flex-1 overflow-y-auto min-h-0">
-          {activeTool === "split" ? (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 h-full min-h-0 overflow-hidden">
-              {/* Left Column: Source Pages */}
-              <div className="flex flex-col bg-bg-surface-variant/20 border border-border-subtle/10 rounded-interactive p-4 min-h-0 overflow-hidden">
-                <div className="flex items-center justify-between pb-2.5 mb-3 border-b border-border-subtle/10 shrink-0">
-                  <span className="text-xs font-bold text-text-secondary uppercase tracking-wider">Source Pages</span>
-                  <span className="text-[10px] bg-bg-surface px-2 py-0.5 rounded font-mono text-text-muted">Click to Add</span>
-                </div>
-                <div className="flex-1 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 gap-3 pr-1 min-h-0">
+            
+            <div className="flex-1 overflow-y-auto min-h-0">
+              <SortableContext
+                items={allSourcePages.map((p) => p.id)}
+                strategy={rectSortingStrategy}
+              >
+                <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3.5 pr-1 min-h-0">
                   {allSourcePages.map((page) => (
                     <PageItem
                       key={page.id}
@@ -625,126 +639,157 @@ export default function Workspace({
                       thumbnailSrc={page.thumbnail}
                       pageNumber={page.pageIndex + 1}
                       fileName={page.fileName}
-                      isDraggable={false}
+                      isDraggable={true}
                       action="add"
                       onClick={() => handleAddPageToSplit(page)}
                     />
                   ))}
-                  {allSourcePages.length === 0 && (
-                    <div className="col-span-full py-12 text-center text-xs text-text-muted">
-                      Import files to see pages here.
-                    </div>
-                  )}
                 </div>
-              </div>
-
-              {/* Right Column: Target Pages */}
-              <div className="flex flex-col bg-bg-surface-variant/20 border border-border-subtle/10 rounded-interactive p-4 min-h-0 overflow-hidden">
-                <div className="flex items-center justify-between pb-2.5 mb-3 border-b border-border-subtle/10 shrink-0">
-                  <span className="text-xs font-bold text-text-secondary uppercase tracking-wider">Pages to Extract</span>
-                  <span className="text-[10px] bg-bg-surface px-2 py-0.5 rounded font-mono text-text-muted">{splitSelectedPages.length} selected</span>
+              </SortableContext>
+              {allSourcePages.length === 0 && (
+                <div className="flex flex-col items-center justify-center h-full min-h-[300px] text-center text-xs text-text-muted">
+                  Import files in the sidebar to view source pages.
                 </div>
-                <div className="flex-1 overflow-y-auto pr-1 min-h-0">
-                  <DndContext
-                    sensors={sensors}
-                    collisionDetection={closestCenter}
-                    onDragEnd={handleDragEndSplitTarget}
-                  >
-                    <SortableContext
-                      items={splitSelectedPages.map((p) => p.id)}
-                      strategy={rectSortingStrategy}
-                    >
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                        {splitSelectedPages.map((page) => (
-                          <PageItem
-                            key={page.id}
-                            id={page.id}
-                            thumbnailSrc={page.thumbnail}
-                            pageNumber={page.pageIndex + 1}
-                            fileName={page.fileName}
-                            onRemove={handleRemovePageFromSplit}
-                            action="remove"
-                          />
-                        ))}
-                      </div>
-                    </SortableContext>
-                  </DndContext>
-                  {splitSelectedPages.length === 0 && (
-                    <div className="py-12 text-center text-xs text-text-muted border border-dashed border-border-subtle/25 rounded-interactive bg-bg-surface-variant/10">
-                      Select pages from the left card to add them here. Drag to re-order.
-                    </div>
-                  )}
-                </div>
-              </div>
+              )}
             </div>
-          ) : virtualPages.length > 0 ? (
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={handleDragEndPageGrid}
-            >
+          </div>
+
+          {/* Card B: Target Pages */}
+          <div 
+            ref={setTargetDroppableRef}
+            className="flex-1 bg-bg-surface p-4 rounded-container border border-border-subtle/10 shadow-soft_elevation flex flex-col min-w-0 h-full overflow-hidden"
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-border-subtle/10 mb-4 gap-4 shrink-0">
+              <h2 className="text-sm font-bold text-text-primary flex items-center gap-2">
+                <span>Selected for Extraction</span>
+                <span className="text-[10px] bg-bg-surface-variant px-2 py-0.5 rounded font-mono text-text-secondary font-bold">
+                  {splitSelectedPages.length}
+                </span>
+              </h2>
+            </div>
+
+            <div className="flex-1 overflow-y-auto min-h-0">
               <SortableContext
-                items={virtualPages.map((p) => p.id)}
+                items={splitSelectedPages.map((p) => p.id)}
                 strategy={rectSortingStrategy}
               >
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3.5">
-                  {virtualPages.map((page) => (
+                <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3">
+                  {splitSelectedPages.map((page) => (
                     <PageItem
                       key={page.id}
                       id={page.id}
-                      fileName={page.fileName}
-                      pageNumber={page.pageIndex + 1}
                       thumbnailSrc={page.thumbnail}
-                      onRemove={(id) => {
-                        const parts = id.split("-");
-                        const segmentId = parts[0];
-                        const seg = segments.find((s) => s.id === segmentId);
-                        if (!seg) return;
-
-                        const file = files.find((f) => f.id === seg.fileId);
-                        if (!file) return;
-
-                        const indices = parsePageRange(seg.range, file.pageCount);
-                        const filteredIndices = indices.filter(
-                          (idx) => idx !== page.pageIndex
-                        );
-
-                        if (filteredIndices.length === 0) {
-                          handleRemoveSegment(segmentId);
-                        } else {
-                          const newRange = filteredIndices
-                            .map((idx) => idx + 1)
-                            .join(", ");
-                          handleSegmentRangeChange(segmentId, newRange);
-                        }
-                      }}
+                      pageNumber={page.pageIndex + 1}
+                      fileName={page.fileName}
+                      onRemove={handleRemovePageFromSplit}
+                      action="remove"
                     />
                   ))}
                 </div>
               </SortableContext>
-            </DndContext>
-          ) : (
-            <div className="flex flex-col items-center justify-center h-full min-h-[350px] border-2 border-dashed border-border-subtle/20 rounded-container p-6 text-center bg-bg-surface-variant/10">
-              <div className="h-14 w-14 rounded-full bg-accent-blue/10 flex items-center justify-center text-accent-blue mb-3">
-                <FileUp className="w-6 h-6 stroke-[1.25px]" />
+              {splitSelectedPages.length === 0 && (
+                <div className="flex flex-col items-center justify-center h-full min-h-[300px] border border-dashed border-border-subtle/20 rounded-interactive p-6 text-center text-xs text-text-muted bg-bg-surface-variant/10">
+                  Select pages from the left card or drag them here to compile.
+                </div>
+              )}
+            </div>
+          </div>
+        </DndContext>
+      ) : (
+        /* Regular single large card */
+        <section className="flex-1 bg-bg-surface p-4 rounded-container border border-border-subtle/10 shadow-soft_elevation flex flex-col min-w-0 h-full overflow-hidden">
+          <div className="flex items-center justify-between pb-3 border-b border-border-subtle/10 mb-4 gap-4 shrink-0">
+            <div>
+              <h2 className="text-sm font-bold text-text-primary flex items-center gap-2">
+                <span>Workspace Desk</span>
+                {virtualPages.length > 0 && (
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-bg-surface-variant font-bold text-text-secondary">
+                    {virtualPages.length} {virtualPages.length === 1 ? "Page" : "Pages"}
+                  </span>
+                )}
+              </h2>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {/* Free period label */}
+              <div className="flex items-center gap-1 px-2.5 py-1 rounded-pill bg-bg-surface-variant border border-border-subtle/10 text-[10px] text-text-secondary">
+                <FileCheck className="w-3.5 h-3.5 text-accent-blue stroke-[1.5px]" />
+                <span className="hidden sm:inline">Free Period Enabled</span>
               </div>
-              <h3 className="text-sm font-bold text-text-primary mb-1">
-                Upload your files to begin
-              </h3>
-              <p className="text-[11px] text-text-secondary max-w-xs leading-relaxed mb-4">
-                Drag and drop PDF files or images anywhere onto this workspace, or use the import button to load files.
-              </p>
-              <Button
-                variant="secondary"
-                onClick={() => fileInputRef.current?.click()}
-                className="h-10 px-5 text-xs"
+            </div>
+          </div>
+
+          {/* Content canvas */}
+          <div className="flex-1 overflow-y-auto min-h-0">
+            {virtualPages.length > 0 ? (
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEndPageGrid}
               >
-                Select Files
-              </Button>
-             </div>
-           )}
-         </div>
-       </section>
+                <SortableContext
+                  items={virtualPages.map((p) => p.id)}
+                  strategy={rectSortingStrategy}
+                >
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3.5">
+                    {virtualPages.map((page) => (
+                      <PageItem
+                        key={page.id}
+                        id={page.id}
+                        fileName={page.fileName}
+                        pageNumber={page.pageIndex + 1}
+                        thumbnailSrc={page.thumbnail}
+                        onRemove={(id) => {
+                          const parts = id.split("-");
+                          const segmentId = parts[0];
+                          const seg = segments.find((s) => s.id === segmentId);
+                          if (!seg) return;
+
+                          const file = files.find((f) => f.id === seg.fileId);
+                          if (!file) return;
+
+                          const indices = parsePageRange(seg.range, file.pageCount);
+                          const filteredIndices = indices.filter(
+                            (idx) => idx !== page.pageIndex
+                          );
+
+                          if (filteredIndices.length === 0) {
+                            handleRemoveSegment(segmentId);
+                          } else {
+                            const newRange = filteredIndices
+                              .map((idx) => idx + 1)
+                              .join(", ");
+                            handleSegmentRangeChange(segmentId, newRange);
+                          }
+                        }}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-full min-h-[350px] border-2 border-dashed border-border-subtle/20 rounded-container p-6 text-center bg-bg-surface-variant/10">
+                <div className="h-14 w-14 rounded-full bg-accent-blue/10 flex items-center justify-center text-accent-blue mb-3">
+                  <FileUp className="w-6 h-6 stroke-[1.25px]" />
+                </div>
+                <h3 className="text-sm font-bold text-text-primary mb-1">
+                  Upload your files to begin
+                </h3>
+                <p className="text-[11px] text-text-secondary max-w-xs leading-relaxed mb-4">
+                  Drag and drop PDF files or images anywhere onto this workspace, or use the import button to load files.
+                </p>
+                <Button
+                  variant="secondary"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="h-10 px-5 text-xs"
+                >
+                  Select Files
+                </Button>
+               </div>
+             )}
+           </div>
+         </section>
+       )}
 
       {/* Slide-over Plugin Request Drawer */}
       {showRequestDrawer && (
