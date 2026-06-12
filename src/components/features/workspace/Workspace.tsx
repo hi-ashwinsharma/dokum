@@ -359,37 +359,8 @@ export default function Workspace() {
 
         {/* Card 2: Tool Configuration & Actions */}
         <div className="bg-bg-surface p-6 rounded-container border border-border-subtle/10 shadow-soft_elevation flex flex-col gap-4 flex-1 min-h-[350px] overflow-hidden">
-          {/* Tools Selector */}
-          <div className="flex flex-col gap-2 shrink-0">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-text-secondary pl-1">
-              Workspace Mode
-            </h3>
-            <div className="grid grid-cols-2 gap-2">
-              {(
-                [
-                  { id: "merge", label: "Merge & Sort" },
-                  { id: "rotate", label: "Rotate Pages" },
-                  { id: "split", label: "Extract Pages" },
-                  { id: "numbers", label: "Page Numbers" },
-                ] as const
-              ).map((tool) => (
-                <button
-                  key={tool.id}
-                  onClick={() => setActiveTool(tool.id)}
-                  className={`h-11 rounded-interactive text-xs font-medium transition-all duration-280 ${
-                    activeTool === tool.id
-                      ? "bg-accent-blue text-white shadow-sm"
-                      : "bg-bg-surface-variant text-text-secondary hover:text-text-primary hover:bg-bg-surface-variant/80"
-                  }`}
-                >
-                  {tool.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
           {/* Action Panel based on mode */}
-          <div className="border-t border-border-subtle/10 pt-4 flex-1 flex flex-col min-h-0 overflow-y-auto">
+          <div className="pt-2 flex-1 flex flex-col min-h-0 overflow-y-auto">
             {activeTool === "merge" && (
               <div className="flex flex-col flex-1 gap-4 min-h-0">
                 <div className="flex items-center justify-between shrink-0">
@@ -550,7 +521,7 @@ export default function Workspace() {
 
       {/* Main Preview Workspace Grid */}
       <section className="flex-1 bg-bg-surface p-6 rounded-container border border-border-subtle/10 shadow-soft_elevation flex flex-col min-w-0">
-        <div className="flex items-center justify-between pb-4 border-b border-border-subtle/10 mb-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b border-border-subtle/10 mb-6 gap-4">
           <div>
             <h2 className="text-lg font-bold text-text-primary flex items-center gap-2">
               <span>Workspace Desk</span>
@@ -566,6 +537,32 @@ export default function Workspace() {
           </div>
 
           <div className="flex items-center gap-3">
+            {/* Contextual Command Bar (shows only when files are imported) */}
+            {files.length > 0 && (
+              <div className="flex items-center bg-bg-surface-variant/60 p-1 rounded-pill border border-border-subtle/10">
+                {(
+                  [
+                    { id: "merge", label: "Merge" },
+                    { id: "rotate", label: "Rotate" },
+                    { id: "split", label: "Extract" },
+                    { id: "numbers", label: "Page Numbers" },
+                  ] as const
+                ).map((tool) => (
+                  <button
+                    key={tool.id}
+                    onClick={() => setActiveTool(tool.id)}
+                    className={`h-8 px-4 rounded-pill text-[11px] font-bold transition-all duration-280 ${
+                      activeTool === tool.id
+                        ? "bg-bg-surface text-accent-blue shadow-sm"
+                        : "text-text-secondary hover:text-text-primary"
+                    }`}
+                  >
+                    {tool.label}
+                  </button>
+                ))}
+              </div>
+            )}
+
             {/* Free period label */}
             <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-pill bg-bg-surface-variant border border-border-subtle/10 text-xs text-text-secondary">
               <FileCheck className="w-4 h-4 text-accent-blue stroke-[1.5px]" />
