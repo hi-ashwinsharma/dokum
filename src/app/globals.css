@@ -1,26 +1,69 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* Light Mode Variables */
+  --bg-main: #f0f4f9;
+  --bg-surface: #ffffff;
+  --bg-surface-variant: #e9eef6;
+  --text-primary: #1f1f1f;
+  --text-secondary: #444746;
+  --text-muted: #757575;
+  --border-subtle: #deede2;
+  --accent-blue: #1a73e8;
+  --accent-blue-hover: #1557b0;
+  
+  --font-sans: 'Google Sans', 'Inter', system-ui, sans-serif;
+  --font-mono: 'Google Sans Mono', 'JetBrains Mono', monospace;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    /* Dark Mode Variables */
+    --bg-main: #131314;
+    --bg-surface: #1e1e20;
+    --bg-surface-variant: #282a2d;
+    --text-primary: #e3e3e3;
+    --text-secondary: #b4b4b4;
+    --text-muted: #757575;
+    --border-subtle: #303134;
+    --accent-blue: #8ab4f8;
+    --accent-blue-hover: #aecbfa;
   }
 }
 
+@theme inline {
+  --color-bg-main: var(--bg-main);
+  --color-bg-surface: var(--bg-surface);
+  --color-bg-surface-variant: var(--bg-surface-variant);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-border-subtle: var(--border-subtle);
+  --color-accent-blue: var(--accent-blue);
+  --color-accent-blue-hover: var(--accent-blue-hover);
+  
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  
+  --radius-pill: 32px;
+  --radius-container: 24px;
+  --radius-component: 16px;
+  --radius-interactive: 12px;
+  
+  --animate-spark-shimmer: shimmer 2s infinite linear;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--bg-main);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  line-height: 1.625;
+  letter-spacing: -0.01em;
+  min-height: 100vh;
+  margin: 0;
 }
