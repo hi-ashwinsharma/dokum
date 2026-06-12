@@ -76,21 +76,23 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Middle Section: Pinned Tools & Search Bar */}
-        <div className="hidden md:flex items-center gap-3">
+        {/* Middle Section: Integrated Search & Pinned Tools in a Single Pill */}
+        <div className="hidden md:flex items-center bg-bg-surface-variant/60 p-1 rounded-pill border border-border-subtle/10 h-11">
+          {/* Integrated Search Button */}
           <button
             onClick={() => setShowCommandPalette(true)}
-            className="h-8 px-3 bg-bg-surface-variant hover:bg-bg-surface-variant/80 text-text-secondary border border-border-subtle/10 rounded-pill flex items-center gap-2 text-xs transition-all duration-280 cursor-pointer min-w-[170px]"
+            className="h-9 px-3.5 hover:bg-bg-surface/30 text-text-secondary hover:text-text-primary rounded-pill flex items-center gap-2 text-xs transition-all duration-280 cursor-pointer min-w-[150px]"
           >
             <Search className="w-3.5 h-3.5 stroke-[1.5px] text-text-muted" />
-            <span>Search tools...</span>
-            <span className="ml-auto text-[9px] font-mono text-text-muted bg-bg-surface px-1.5 py-0.5 rounded border border-border-subtle/10">⌘K</span>
+            <span>Search...</span>
+            <kbd className="ml-auto text-[9px] font-mono text-text-muted bg-bg-surface/80 px-1.5 py-0.5 rounded border border-border-subtle/10">⌘K</kbd>
           </button>
 
-          {/* Divider */}
-          <div className="h-4 w-px bg-border-subtle/30" />
+          {/* Integrated Vertical Divider */}
+          <div className="h-4 w-px bg-border-subtle/30 mx-1.5 shrink-0" />
 
-          <div className="flex items-center gap-1 bg-bg-surface-variant/60 p-0.5 rounded-pill border border-border-subtle/10">
+          {/* Integrated Tool Selectors */}
+          <div className="flex items-center gap-1.5">
             {(
               [
                 { id: "merge", label: "Merge", icon: FileText, desc: "Combine PDFs" },
@@ -104,17 +106,17 @@ export default function Home() {
                 <div key={tool.id} className="relative group">
                   <button
                     onClick={() => setActiveTool(tool.id)}
-                    className={`h-7 rounded-pill flex items-center gap-1.5 transition-all cursor-pointer ${
+                    className={`h-9 rounded-pill flex items-center gap-2 transition-all cursor-pointer ${
                       activeTool === tool.id
-                        ? "bg-bg-surface text-accent-blue shadow-sm px-3 text-[11px] font-bold"
-                        : "text-text-secondary hover:text-text-primary px-2"
+                        ? "bg-bg-surface text-accent-blue shadow-sm px-4 text-xs font-bold"
+                        : "text-text-secondary hover:text-text-primary px-3"
                     }`}
                   >
                     <ToolIcon className="w-3.5 h-3.5 stroke-[1.5px]" />
                     {activeTool === tool.id && <span>{tool.label}</span>}
                   </button>
                   {/* Tooltip */}
-                  <div className="absolute top-full mt-2 left-1/2 transform -translate-x-1/2 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50 bg-text-primary text-bg-surface text-[10px] font-medium px-2 py-1 rounded shadow-md whitespace-nowrap">
+                  <div className="absolute top-full mt-2.5 left-1/2 transform -translate-x-1/2 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50 bg-text-primary text-bg-surface text-[10px] font-medium px-2 py-1 rounded shadow-md whitespace-nowrap">
                     {tool.desc}
                   </div>
                 </div>

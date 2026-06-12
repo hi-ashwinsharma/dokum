@@ -8,7 +8,7 @@ import { PageItem } from "./PageItem";
 import { SourceFileList } from "./SourceFileList";
 import { SequenceItem } from "./SequenceItem";
 import PluginRequestBoard from "@/components/features/requests/PluginRequestBoard";
-import { parsePageRange } from "@/lib/pageParser";
+import { parsePageRange, pagesToRangeString } from "@/lib/pageParser";
 import { Button } from "@/components/ui/Button";
 import { 
   FileUp, 
@@ -19,7 +19,9 @@ import {
   Scissors,
   Hash,
   X,
-  FileText
+  FileText,
+  ChevronsRight,
+  Trash2
 } from "lucide-react";
 
 // Dnd Kit
@@ -76,12 +78,55 @@ export default function Workspace({
   const [isProcessing, setIsProcessing] = useState(false);
   const [showRequestDrawer, setShowRequestDrawer] = useState(false);
   
-  // States for other minor operations
   const [rotationDegrees, setRotationDegrees] = useState<90 | 180 | 270>(90);
-  const [splitPageRange, setSplitPageRange] = useState("");
+  const [manualRanges, setManualRanges] = useState<Map<string, string>>(new Map());
+  const [focusedFileId, setFocusedFileId] = useState<string | null>(null);
 
   // Split tool interactive states
   const [splitSelectedPages, setSplitSelectedPages] = useState<VirtualPage[]>([]);
+
+  const handleUpdateManualRange = (fileId: string, rangeText: string) => {
+    const file = files.find(f => f.id === fileId);
+    if (!file) return;
+
+    const indices = parsePageRange(rangeText, file.pageCount);
+    const newPages = indices.map((pageIdx) => {
+      const thumbnailKey = `${file.id}-${pageIdx}`;
+      return {
+        id: `split-target-${file.id}-${pageIdx}-${Date.now()}-${Math.random()}`,
+        segmentId: "source",
+        fileId: file.id,
+        pageIndex: pageIdx,
+        fileName: file.file.name,
+        fileType: file.file.type,
+        thumbnail: thumbnails.get(thumbnailKey),
+      };
+    });
+
+    setSplitSelectedPages((prev) => {
+      const otherFilesPages = prev.filter((p) => p.fileId !== fileId);
+      return [...otherFilesPages, ...newPages];
+    });
+  };
+
+  // Synchronize manualRanges with splitSelectedPages
+  useEffect(() => {
+    setManualRanges((prev) => {
+      const next = new Map(prev);
+      files.forEach((file) => {
+        if (file.id === focusedFileId) return; // Do not overwrite active typing
+        const filePages = splitSelectedPages.filter((p) => p.fileId === file.id);
+        if (filePages.length === 0) {
+          next.set(file.id, "");
+        } else {
+          // Extract page indices in drag order and format as range
+          const pageIndices = filePages.map((p) => p.pageIndex);
+          next.set(file.id, pagesToRangeString(pageIndices));
+        }
+      });
+      return next;
+    });
+  }, [splitSelectedPages, files, focusedFileId]);
 
   // Derived state: all pages from all imported source files
   const allSourcePages = useMemo(() => {
@@ -114,6 +159,18 @@ export default function Workspace({
 
   const handleRemovePageFromSplit = (id: string) => {
     setSplitSelectedPages((prev) => prev.filter((p) => p.id !== id));
+  };
+
+  const handleAddAllToSplit = () => {
+    const newPages = allSourcePages.map((page) => ({
+      ...page,
+      id: `split-target-${page.fileId}-${page.pageIndex}-${Date.now()}-${Math.random()}`
+    }));
+    setSplitSelectedPages((prev) => [...prev, ...newPages]);
+  };
+
+  const handleClearAllSplit = () => {
+    setSplitSelectedPages([]);
   };
 
   const { setNodeRef: setTargetDroppableRef } = useDroppable({
@@ -568,10 +625,75 @@ export default function Workspace({
             )}
 
             {activeTool === "split" && (
-              <div className="flex flex-col gap-3.5 h-full">
-                <p className="text-[11px] text-text-muted leading-relaxed">
-                  Interactive Split Desk: Select pages from the left card in the workspace desk to place them in the right card for extraction. You can drag to re-order the extraction pages.
+              <div className="flex flex-col gap-3.5 h-full min-h-0">
+                <p className="text-[11px] text-text-muted leading-relaxed shrink-0">
+                  Select pages from the left workspace card, or type page ranges below to select pages for extraction.
                 </p>
+
+                {files.length > 0 ? (
+                  <div className="flex-1 overflow-y-auto flex flex-col gap-3 pr-1 min-h-0">
+                    <h5 className="text-[10px] font-bold text-text-secondary uppercase tracking-wider pl-1 shrink-0">
+                      Select Pages by Range
+                    </h5>
+                    {files.map((file, index) => {
+                      let roundClass = "rounded-interactive";
+                      if (files.length === 1) {
+                        roundClass = "rounded-[20px]";
+                      } else if (index === 0) {
+                        roundClass = "rounded-t-[20px] rounded-b-[6px]";
+                      } else if (index === files.length - 1) {
+                        roundClass = "rounded-b-[20px] rounded-t-[6px]";
+                      } else {
+                        roundClass = "rounded-[6px]";
+                      }
+
+                      return (
+                        <div
+                          key={file.id}
+                          className={`bg-bg-surface-variant/40 p-2.5 border border-border-subtle/10 flex flex-col gap-2 shrink-0 ${roundClass}`}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span
+                              className="text-[11px] font-medium text-text-primary truncate"
+                              title={file.file.name}
+                            >
+                              {file.file.name}
+                            </span>
+                            <span className="text-[9px] bg-bg-surface px-1.5 py-0.5 rounded text-text-secondary font-mono shrink-0">
+                              {file.pageCount} pgs
+                            </span>
+                          </div>
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              placeholder="e.g. 1-3, 5"
+                              value={manualRanges.get(file.id) || ""}
+                              onFocus={() => setFocusedFileId(file.id)}
+                              onBlur={() => {
+                                setFocusedFileId(null);
+                                handleUpdateManualRange(file.id, manualRanges.get(file.id) || "");
+                              }}
+                              onChange={(e) => {
+                                const next = new Map(manualRanges);
+                                next.set(file.id, e.target.value);
+                                setManualRanges(next);
+                                handleUpdateManualRange(file.id, e.target.value);
+                              }}
+                              className="flex-1 h-8 px-2 bg-bg-surface text-text-primary border border-border-subtle/20 rounded-[6px] text-xs focus:outline-none focus:border-accent-blue/50"
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="flex-1 flex flex-col items-center justify-center p-4 text-center border border-dashed border-border-subtle rounded-interactive bg-bg-surface-variant/20 min-h-[100px]">
+                    <p className="text-[11px] text-text-muted leading-relaxed">
+                      Import files above to input page ranges.
+                    </p>
+                  </div>
+                )}
+
                 <Button
                   variant="primary"
                   onClick={executeSplit}
@@ -616,7 +738,7 @@ export default function Workspace({
           onDragEnd={handleDragEndSplit}
         >
           {/* Card A: Source Pages */}
-          <div className="flex-1 bg-bg-surface p-4 rounded-container border border-border-subtle/10 shadow-soft_elevation flex flex-col min-w-0 h-full overflow-hidden">
+          <div className="flex-1 bg-bg-surface p-4 rounded-container border border-border-subtle/10 shadow-soft_elevation flex flex-col min-w-0 h-full overflow-hidden relative">
             <div className="flex items-center justify-between pb-3 border-b border-border-subtle/10 mb-4 gap-4 shrink-0">
               <h2 className="text-sm font-bold text-text-primary flex items-center gap-2">
                 <span>Source Pages</span>
@@ -631,7 +753,7 @@ export default function Workspace({
                 items={allSourcePages.map((p) => p.id)}
                 strategy={rectSortingStrategy}
               >
-                <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3.5 pr-1 min-h-0">
+                <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3.5 pr-1 min-h-0 pb-16">
                   {allSourcePages.map((page) => (
                     <PageItem
                       key={page.id}
@@ -652,12 +774,22 @@ export default function Workspace({
                 </div>
               )}
             </div>
+
+            {allSourcePages.length > 0 && (
+              <button
+                onClick={handleAddAllToSplit}
+                className="absolute bottom-6 right-6 z-20 shadow-md bg-accent-blue/10 hover:bg-accent-blue/20 text-accent-blue border border-accent-blue/20 h-10 w-10 rounded-full flex items-center justify-center transition-all duration-200"
+                title="Add All Pages"
+              >
+                <ChevronsRight className="w-5 h-5 stroke-[2px]" />
+              </button>
+            )}
           </div>
 
           {/* Card B: Target Pages */}
           <div 
             ref={setTargetDroppableRef}
-            className="flex-1 bg-bg-surface p-4 rounded-container border border-border-subtle/10 shadow-soft_elevation flex flex-col min-w-0 h-full overflow-hidden"
+            className="flex-1 bg-bg-surface p-4 rounded-container border border-border-subtle/10 shadow-soft_elevation flex flex-col min-w-0 h-full overflow-hidden relative"
           >
             <div className="flex items-center justify-between pb-3 border-b border-border-subtle/10 mb-4 gap-4 shrink-0">
               <h2 className="text-sm font-bold text-text-primary flex items-center gap-2">
@@ -673,7 +805,7 @@ export default function Workspace({
                 items={splitSelectedPages.map((p) => p.id)}
                 strategy={rectSortingStrategy}
               >
-                <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 pb-16">
                   {splitSelectedPages.map((page) => (
                     <PageItem
                       key={page.id}
@@ -693,6 +825,16 @@ export default function Workspace({
                 </div>
               )}
             </div>
+
+            {splitSelectedPages.length > 0 && (
+              <button
+                onClick={handleClearAllSplit}
+                className="absolute bottom-6 right-6 z-20 shadow-md bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 h-10 w-10 rounded-full flex items-center justify-center transition-all duration-200"
+                title="Clear All Selected"
+              >
+                <Trash2 className="w-4 h-4 stroke-[2px]" />
+              </button>
+            )}
           </div>
         </DndContext>
       ) : (
