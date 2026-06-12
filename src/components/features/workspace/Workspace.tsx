@@ -292,6 +292,17 @@ export default function Workspace({
                 console.error("Thumbnail load error page", i, err);
               }
             }
+          } else if (file.type.startsWith("image/") || file.name.match(/\.(png|jpe?g|gif|webp)$/i)) {
+            try {
+              const objectUrl = URL.createObjectURL(file);
+              setThumbnails((prev) => {
+                const copy = new Map(prev);
+                copy.set(`${fileId}-0`, objectUrl);
+                return copy;
+              });
+            } catch (err) {
+              console.error("Image thumbnail loading error", err);
+            }
           }
         } catch (err) {
           console.error("Error reading file metadata", err);
