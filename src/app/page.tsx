@@ -66,13 +66,8 @@ export default function Home() {
       <header className="sticky top-0 z-40 bg-bg-main/80 backdrop-blur-md border-b border-border-subtle/10 px-6 h-16 shrink-0 flex items-center justify-between">
         <div className="flex items-center gap-8">
           {/* Logo */}
-          <div className="flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-pill bg-gradient-to-r from-accent-blue to-[#4285f4] flex items-center justify-center text-white shadow-sm font-semibold text-sm">
-              D
-            </div>
-            <span className="text-lg font-bold tracking-tight text-text-primary font-sans">
-              Dokum
-            </span>
+          <div className="flex items-center">
+            <img src="/icon.svg" alt="Dokum" className="h-14 w-auto object-contain" />
           </div>
         </div>
 
