@@ -98,14 +98,14 @@ export default function Home() {
                 <div key={tool.id} className="relative group">
                   <button
                     onClick={() => setActiveTool(tool.id)}
-                    className={`h-7 px-3 text-[11px] font-bold rounded-pill flex items-center gap-1.5 transition-all ${
+                    className={`h-7 rounded-pill flex items-center gap-1.5 transition-all cursor-pointer ${
                       activeTool === tool.id
-                        ? "bg-bg-surface text-accent-blue shadow-sm"
-                        : "text-text-secondary hover:text-text-primary"
+                        ? "bg-bg-surface text-accent-blue shadow-sm px-3 text-[11px] font-bold"
+                        : "text-text-secondary hover:text-text-primary px-2"
                     }`}
                   >
-                    <ToolIcon className="w-3 h-3 stroke-[1.5px]" />
-                    <span>{tool.label}</span>
+                    <ToolIcon className="w-3.5 h-3.5 stroke-[1.5px]" />
+                    {activeTool === tool.id && <span>{tool.label}</span>}
                   </button>
                   {/* Tooltip */}
                   <div className="absolute top-full mt-2 left-1/2 transform -translate-x-1/2 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50 bg-text-primary text-bg-surface text-[10px] font-medium px-2 py-1 rounded shadow-md whitespace-nowrap">

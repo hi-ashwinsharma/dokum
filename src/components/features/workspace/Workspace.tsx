@@ -79,6 +79,53 @@ export default function Workspace({
   const [rotationDegrees, setRotationDegrees] = useState<90 | 180 | 270>(90);
   const [splitPageRange, setSplitPageRange] = useState("");
 
+  // Split tool interactive states
+  const [splitSelectedPages, setSplitSelectedPages] = useState<VirtualPage[]>([]);
+
+  // Derived state: all pages from all imported source files
+  const allSourcePages = useMemo(() => {
+    const pages: VirtualPage[] = [];
+    files.forEach((file) => {
+      for (let i = 0; i < file.pageCount; i++) {
+        const uniquePageId = `source-${file.id}-${i}`;
+        const thumbnailKey = `${file.id}-${i}`;
+        pages.push({
+          id: uniquePageId,
+          segmentId: "source",
+          fileId: file.id,
+          pageIndex: i,
+          fileName: file.file.name,
+          fileType: file.file.type,
+          thumbnail: thumbnails.get(thumbnailKey),
+        });
+      }
+    });
+    return pages;
+  }, [files, thumbnails]);
+
+  const handleAddPageToSplit = (page: VirtualPage) => {
+    const newPage = {
+      ...page,
+      id: `split-target-${page.fileId}-${page.pageIndex}-${Date.now()}-${Math.random()}`
+    };
+    setSplitSelectedPages((prev) => [...prev, newPage]);
+  };
+
+  const handleRemovePageFromSplit = (id: string) => {
+    setSplitSelectedPages((prev) => prev.filter((p) => p.id !== id));
+  };
+
+  const handleDragEndSplitTarget = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    setSplitSelectedPages((prev) => {
+      const oldIndex = prev.findIndex((p) => p.id === active.id);
+      const newIndex = prev.findIndex((p) => p.id === over.id);
+      return arrayMove(prev, oldIndex, newIndex);
+    });
+  };
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const sensors = useSensors(
@@ -280,21 +327,25 @@ export default function Workspace({
   };
 
   const executeSplit = async () => {
-    if (files.length === 0 || !splitPageRange) return;
+    if (splitSelectedPages.length === 0) {
+      alert("Please select at least one page for extraction.");
+      return;
+    }
     setIsProcessing(true);
     try {
-      const sourceFile = files[0];
-      const indices = parsePageRange(splitPageRange, sourceFile.pageCount);
-      if (indices.length === 0) {
-        alert("Invalid page range specified.");
-        setIsProcessing(false);
-        return;
-      }
-      const splitBytes = await PDFManager.splitPDF(sourceFile.file, indices);
-      triggerDownload(splitBytes, `split_${sourceFile.file.name}`);
+      const items = splitSelectedPages.map((page) => {
+        const sourceFile = files.find((f) => f.id === page.fileId);
+        return {
+          file: sourceFile!.file,
+          pageIndex: page.pageIndex,
+        };
+      });
+
+      const splitBytes = await PDFManager.assemblePDF(items);
+      triggerDownload(splitBytes, "dokum_extracted.pdf");
     } catch (err) {
-      console.error("Split failed", err);
-      alert("Failed to split PDF.");
+      console.error("Split/Extraction failed", err);
+      alert("Failed to extract pages.");
     } finally {
       setIsProcessing(false);
     }
@@ -492,31 +543,19 @@ export default function Workspace({
 
             {activeTool === "split" && (
               <div className="flex flex-col gap-3.5 h-full">
-                <div>
-                  <label className="text-xs font-semibold text-text-secondary pl-1 block mb-2">
-                    Pages to Extract
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. 1-3, 5, 8-10"
-                    value={splitPageRange}
-                    onChange={(e) => setSplitPageRange(e.target.value)}
-                    className="w-full h-11 px-4 bg-bg-surface-variant placeholder:text-text-muted/65 border border-transparent rounded-pill text-xs focus:outline-none focus:ring-2 focus:ring-accent-blue/30"
-                  />
-                </div>
                 <p className="text-[11px] text-text-muted leading-relaxed">
-                  Select pages to pull from your primary document (e.g. &quot;1-5&quot; to save only the first five pages).
+                  Interactive Split Desk: Select pages from the left card in the workspace desk to place them in the right card for extraction. You can drag to re-order the extraction pages.
                 </p>
                 <Button
                   variant="primary"
                   onClick={executeSplit}
-                  disabled={files.length === 0 || !splitPageRange || isProcessing}
+                  disabled={splitSelectedPages.length === 0 || isProcessing}
                   className="w-full mt-auto h-11 text-xs shrink-0"
                 >
                   {isProcessing ? (
                     <RefreshCw className="w-4 h-4 animate-spin" />
                   ) : (
-                    "Extract Pages"
+                    "Extract Selected Pages"
                   )}
                 </Button>
               </div>
@@ -570,7 +609,75 @@ export default function Workspace({
 
         {/* Content canvas */}
         <div className="flex-1 overflow-y-auto min-h-0">
-          {virtualPages.length > 0 ? (
+          {activeTool === "split" ? (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 h-full min-h-0 overflow-hidden">
+              {/* Left Column: Source Pages */}
+              <div className="flex flex-col bg-bg-surface-variant/20 border border-border-subtle/10 rounded-interactive p-4 min-h-0 overflow-hidden">
+                <div className="flex items-center justify-between pb-2.5 mb-3 border-b border-border-subtle/10 shrink-0">
+                  <span className="text-xs font-bold text-text-secondary uppercase tracking-wider">Source Pages</span>
+                  <span className="text-[10px] bg-bg-surface px-2 py-0.5 rounded font-mono text-text-muted">Click to Add</span>
+                </div>
+                <div className="flex-1 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 gap-3 pr-1 min-h-0">
+                  {allSourcePages.map((page) => (
+                    <PageItem
+                      key={page.id}
+                      id={page.id}
+                      thumbnailSrc={page.thumbnail}
+                      pageNumber={page.pageIndex + 1}
+                      fileName={page.fileName}
+                      isDraggable={false}
+                      action="add"
+                      onClick={() => handleAddPageToSplit(page)}
+                    />
+                  ))}
+                  {allSourcePages.length === 0 && (
+                    <div className="col-span-full py-12 text-center text-xs text-text-muted">
+                      Import files to see pages here.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Right Column: Target Pages */}
+              <div className="flex flex-col bg-bg-surface-variant/20 border border-border-subtle/10 rounded-interactive p-4 min-h-0 overflow-hidden">
+                <div className="flex items-center justify-between pb-2.5 mb-3 border-b border-border-subtle/10 shrink-0">
+                  <span className="text-xs font-bold text-text-secondary uppercase tracking-wider">Pages to Extract</span>
+                  <span className="text-[10px] bg-bg-surface px-2 py-0.5 rounded font-mono text-text-muted">{splitSelectedPages.length} selected</span>
+                </div>
+                <div className="flex-1 overflow-y-auto pr-1 min-h-0">
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleDragEndSplitTarget}
+                  >
+                    <SortableContext
+                      items={splitSelectedPages.map((p) => p.id)}
+                      strategy={rectSortingStrategy}
+                    >
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        {splitSelectedPages.map((page) => (
+                          <PageItem
+                            key={page.id}
+                            id={page.id}
+                            thumbnailSrc={page.thumbnail}
+                            pageNumber={page.pageIndex + 1}
+                            fileName={page.fileName}
+                            onRemove={handleRemovePageFromSplit}
+                            action="remove"
+                          />
+                        ))}
+                      </div>
+                    </SortableContext>
+                  </DndContext>
+                  {splitSelectedPages.length === 0 && (
+                    <div className="py-12 text-center text-xs text-text-muted border border-dashed border-border-subtle/25 rounded-interactive bg-bg-surface-variant/10">
+                      Select pages from the left card to add them here. Drag to re-order.
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : virtualPages.length > 0 ? (
             <DndContext
               sensors={sensors}
               collisionDetection={closestCenter}
