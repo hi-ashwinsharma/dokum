@@ -450,7 +450,7 @@ export default function Workspace({
   };
 
   return (
-    <div className="flex flex-col lg:flex-row h-[calc(100vh-64px)] gap-3.5 p-3.5 overflow-hidden">
+    <div className="flex flex-col lg:flex-row h-[calc(100vh-64px)] gap-3.5 px-3.5 pb-3.5 pt-1 overflow-hidden">
       {/* Split Sidebar Wrapper */}
       <div className="w-full lg:w-80 shrink-0 flex flex-col gap-3.5 h-full overflow-hidden relative">
         {/* Card 1: Documents & Uploads */}

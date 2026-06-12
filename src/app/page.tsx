@@ -63,11 +63,11 @@ export default function Home() {
   return (
     <div className="h-screen flex flex-col bg-bg-main text-text-primary overflow-hidden">
       {/* Navbar */}
-      <header className="sticky top-0 z-40 bg-bg-main/80 backdrop-blur-md border-b border-border-subtle/10 px-6 h-16 shrink-0 flex items-center justify-between">
-        <div className="flex items-center gap-8">
+      <header className="sticky top-0 z-40 bg-bg-main/80 backdrop-blur-md border-b border-border-subtle/10 px-6 h-16 shrink-0 flex items-center justify-between relative">
+        <div className="flex items-center gap-8 h-full">
           {/* Logo */}
-          <div className="flex items-center">
-            <img src="/icon.svg" alt="Dokum" className="h-14 w-auto object-contain" />
+          <div className="w-36 h-full relative shrink-0">
+            <img src="/icon.svg" alt="Dokum" className="absolute left-0 top-1/2 -translate-y-1/2 h-20 w-auto object-contain z-10" />
           </div>
         </div>
 
