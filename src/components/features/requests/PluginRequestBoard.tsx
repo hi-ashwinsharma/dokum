@@ -44,7 +44,11 @@ interface PluginRequest {
   createdAt: unknown;
 }
 
-export default function PluginRequestBoard() {
+interface PluginRequestBoardProps {
+  onClose?: () => void;
+}
+
+export default function PluginRequestBoard({ onClose }: PluginRequestBoardProps) {
   const { user } = useAuth();
   const [requests, setRequests] = useState<PluginRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -186,17 +190,38 @@ export default function PluginRequestBoard() {
     <div className="w-full max-w-5xl mx-auto px-4 py-8">
       {/* Header Block */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-10">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-text-primary flex items-center gap-2">
-            <span>Plugin Request Portal</span>
-            <span className="text-[10px] bg-accent-blue/15 text-accent-blue px-2 py-0.5 rounded-full font-bold font-mono uppercase">
-              Community Board
-            </span>
-          </h1>
-          <p className="text-sm text-text-secondary mt-1 max-w-xl">
+        <div className="flex-1">
+          <div className="flex items-center justify-between gap-4">
+            <h1 className="text-xl font-bold tracking-tight text-text-primary flex items-center gap-2">
+              <span>Plugin Request Portal</span>
+              <span className="text-[10px] bg-accent-blue/15 text-accent-blue px-2 py-0.5 rounded-full font-bold font-mono uppercase">
+                Community Board
+              </span>
+            </h1>
+            {onClose && (
+              <button
+                onClick={onClose}
+                className="p-1.5 text-text-muted hover:text-text-primary rounded-full hover:bg-bg-surface-variant/40 md:hidden"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            )}
+          </div>
+          <p className="text-xs text-text-secondary mt-1 max-w-xl">
             Vote on proposed plugins or suggest your own. Help us shape the ultimate local-first offline workspace utilities.
           </p>
         </div>
+
+        <div className="flex items-center gap-3 shrink-0 w-full md:w-auto">
+          {onClose && (
+            <Button
+              variant="secondary"
+              onClick={onClose}
+              className="h-12 px-5 hidden md:flex items-center gap-2"
+            >
+              Close Feed
+            </Button>
+          )}
 
         <Button 
           variant="primary" 
@@ -209,6 +234,7 @@ export default function PluginRequestBoard() {
           <MessageSquarePlus className="w-5 h-5 stroke-[1.5px]" />
           <span>Request a Plugin</span>
         </Button>
+      </div>
       </div>
 
       {/* Control Bar: Search & Status Filters */}

@@ -7,6 +7,7 @@ import { PDFDocument } from 'pdf-lib';
 import { PageItem } from "./PageItem";
 import { SourceFileList } from "./SourceFileList";
 import { SequenceItem } from "./SequenceItem";
+import PluginRequestBoard from "@/components/features/requests/PluginRequestBoard";
 import { parsePageRange } from "@/lib/pageParser";
 import { Button } from "@/components/ui/Button";
 import { 
@@ -62,6 +63,7 @@ export default function Workspace() {
   const [thumbnails, setThumbnails] = useState<Map<string, string>>(new Map()); // Key: `${fileId}-${pageIndex}`
   const [isProcessing, setIsProcessing] = useState(false);
   const [activeTool, setActiveTool] = useState<"merge" | "rotate" | "split" | "numbers">("merge");
+  const [showRequestDrawer, setShowRequestDrawer] = useState(false);
   
   // States for other minor operations
   const [rotationDegrees, setRotationDegrees] = useState<90 | 180 | 270>(90);
@@ -355,6 +357,14 @@ export default function Workspace() {
               </div>
             </div>
           )}
+
+          {/* Suggest a Plugin button */}
+          <button
+            onClick={() => setShowRequestDrawer(true)}
+            className="w-full h-11 border border-border-subtle bg-bg-surface hover:bg-bg-surface-variant text-text-secondary hover:text-text-primary rounded-pill font-medium text-xs flex items-center justify-center gap-1.5 transition-all duration-280 mt-auto shrink-0"
+          >
+            <span>Suggest a Plugin</span>
+          </button>
         </div>
 
         {/* Card 2: Tool Configuration & Actions */}
@@ -640,10 +650,19 @@ export default function Workspace() {
               >
                 Select Files
               </Button>
-            </div>
-          )}
+             </div>
+           )}
+         </div>
+       </section>
+
+      {/* Slide-over Plugin Request Drawer */}
+      {showRequestDrawer && (
+        <div className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-sm">
+          <div className="w-full max-w-xl bg-bg-surface h-full shadow-lg p-4 flex flex-col overflow-y-auto animate-in slide-in-from-right duration-280 border-l border-border-subtle/10">
+            <PluginRequestBoard onClose={() => setShowRequestDrawer(false)} />
+          </div>
         </div>
-      </section>
+      )}
     </div>
   );
 }
