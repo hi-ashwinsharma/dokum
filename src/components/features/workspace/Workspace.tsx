@@ -309,237 +309,244 @@ export default function Workspace() {
 
   return (
     <div className="flex flex-col lg:flex-row h-full min-h-[calc(100vh-80px)] gap-6 p-6">
-      {/* Sidebar - Files and Operations list */}
-      <aside className="w-full lg:w-80 shrink-0 flex flex-col gap-6 bg-bg-surface p-6 rounded-container border border-border-subtle/10 shadow-soft_elevation relative">
-        {/* Floating limited period badge */}
-        <div className="absolute -top-3 left-6 px-3 py-1 bg-accent-blue/15 text-accent-blue rounded-full text-[10px] font-bold font-mono border border-accent-blue/20">
-          FREE PERIOD ACTIVE
-        </div>
+      {/* Split Sidebar Wrapper */}
+      <div className="w-full lg:w-80 shrink-0 flex flex-col gap-6 h-full relative">
+        {/* Card 1: Documents & Uploads */}
+        <div className="bg-bg-surface p-6 rounded-container border border-border-subtle/10 shadow-soft_elevation flex flex-col gap-4 max-h-[40vh] relative pt-8">
+          {/* Floating limited period badge */}
+          <div className="absolute -top-3 left-6 px-3 py-1 bg-accent-blue/15 text-accent-blue rounded-full text-[10px] font-bold font-mono border border-accent-blue/20">
+            FREE PERIOD ACTIVE
+          </div>
 
-        {/* File Uploader */}
-        <div className="flex flex-col gap-2 mt-2">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-text-secondary pl-1">
-            Import Documents
-          </h3>
-          <input
-            type="file"
-            multiple
-            accept=".pdf, image/png, image/jpeg, image/jpg"
-            className="hidden"
-            onChange={handleFileUpload}
-            ref={fileInputRef}
-          />
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isProcessing}
-            className="w-full h-14 border border-dashed border-border-subtle bg-bg-surface-variant/40 hover:bg-bg-surface-variant text-text-primary rounded-pill font-medium flex items-center justify-center gap-2.5 transition-all duration-280"
-          >
-            <FileUp className="w-5 h-5 text-accent-blue stroke-[1.5px]" />
-            <span className="text-sm">Upload Files</span>
-          </button>
-        </div>
-
-        {/* Source Files Section */}
-        {files.length > 0 && (
-          <div className="flex flex-col gap-2 max-h-[200px] overflow-y-auto">
+          <div className="flex flex-col gap-2">
             <h3 className="text-xs font-bold uppercase tracking-wider text-text-secondary pl-1">
-              Source Files
+              Import Documents
             </h3>
-            <SourceFileList
-              files={files}
-              onRemove={handleRemoveFile}
-              onAddSegment={handleAddSegment}
+            <input
+              type="file"
+              multiple
+              accept=".pdf, image/png, image/jpeg, image/jpg"
+              className="hidden"
+              onChange={handleFileUpload}
+              ref={fileInputRef}
             />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isProcessing}
+              className="w-full h-14 border border-dashed border-border-subtle bg-bg-surface-variant/40 hover:bg-bg-surface-variant text-text-primary rounded-pill font-medium flex items-center justify-center gap-2.5 transition-all duration-280"
+            >
+              <FileUp className="w-5 h-5 text-accent-blue stroke-[1.5px]" />
+              <span className="text-sm">Upload Files</span>
+            </button>
           </div>
-        )}
 
-        {/* Tools Selector */}
-        <div className="flex flex-col gap-2">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-text-secondary pl-1">
-            Workspace Mode
-          </h3>
-          <div className="grid grid-cols-2 gap-2">
-            {(
-              [
-                { id: "merge", label: "Merge & Sort" },
-                { id: "rotate", label: "Rotate Pages" },
-                { id: "split", label: "Extract Pages" },
-                { id: "numbers", label: "Page Numbers" },
-              ] as const
-            ).map((tool) => (
-              <button
-                key={tool.id}
-                onClick={() => setActiveTool(tool.id)}
-                className={`h-11 rounded-interactive text-xs font-medium transition-all duration-280 ${
-                  activeTool === tool.id
-                    ? "bg-accent-blue text-white shadow-sm"
-                    : "bg-bg-surface-variant text-text-secondary hover:text-text-primary hover:bg-bg-surface-variant/80"
-                }`}
-              >
-                {tool.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Action Panel based on mode */}
-        <div className="border-t border-border-subtle/10 pt-4 flex-1 flex flex-col gap-4">
-          {activeTool === "merge" && (
-            <div className="flex flex-col flex-1 gap-4">
-              <div className="flex items-center justify-between">
-                <h4 className="text-xs font-bold text-text-secondary uppercase tracking-wider">
-                  Sequence blocks
-                </h4>
-                <span className="text-[10px] bg-bg-surface-variant px-2 py-0.5 rounded font-mono">
-                  {segments.length}
-                </span>
-              </div>
-              <div className="flex-1 overflow-y-auto max-h-[30vh]">
-                <DndContext
-                  sensors={sensors}
-                  collisionDetection={closestCenter}
-                  onDragEnd={handleDragEndSequence}
-                >
-                  <SortableContext
-                    items={segments.map((s) => s.id)}
-                    strategy={verticalListSortingStrategy}
-                  >
-                    <div className="flex flex-col gap-2">
-                      {segments.map((segment) => (
-                        <SequenceItem
-                          key={segment.id}
-                          id={segment.id}
-                          fileName={
-                            files.find((f) => f.id === segment.fileId)?.file
-                              .name || "File Loading"
-                          }
-                          range={segment.range}
-                          onRangeChange={(val) =>
-                            handleSegmentRangeChange(segment.id, val)
-                          }
-                          onRemove={() => handleRemoveSegment(segment.id)}
-                        />
-                      ))}
-                    </div>
-                  </SortableContext>
-                </DndContext>
-                {segments.length === 0 && (
-                  <div className="p-4 text-center text-xs text-text-muted border border-dashed border-border-subtle rounded-interactive bg-bg-surface-variant/20">
-                    Import files above, then tap to add blocks to sequence.
-                  </div>
-                )}
-              </div>
-              <Button
-                variant="primary"
-                onClick={executeMerge}
-                disabled={virtualPages.length === 0 || isProcessing}
-                className="w-full mt-auto"
-              >
-                {isProcessing ? (
-                  <RefreshCw className="w-5 h-5 animate-spin" />
-                ) : (
-                  "Export Merged PDF"
-                )}
-              </Button>
-            </div>
-          )}
-
-          {activeTool === "rotate" && (
-            <div className="flex flex-col gap-4">
-              <div>
-                <label className="text-xs font-semibold text-text-secondary pl-1 block mb-2">
-                  Degrees
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {([90, 180, 270] as const).map((deg) => (
-                    <button
-                      key={deg}
-                      onClick={() => setRotationDegrees(deg)}
-                      className={`h-10 text-xs font-mono rounded-interactive border ${
-                        rotationDegrees === deg
-                          ? "border-accent-blue bg-accent-blue/10 text-accent-blue"
-                          : "border-border-subtle/20 bg-bg-surface-variant hover:bg-bg-surface-variant/80 text-text-primary"
-                      }`}
-                    >
-                      +{deg}°
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <p className="text-[11px] text-text-muted leading-relaxed">
-                Applies {rotationDegrees}° rotation to all pages in your primary source document (first document uploaded).
-              </p>
-              <Button
-                variant="primary"
-                onClick={executeRotate}
-                disabled={files.length === 0 || isProcessing}
-                className="w-full"
-              >
-                {isProcessing ? (
-                  <RefreshCw className="w-5 h-5 animate-spin" />
-                ) : (
-                  <span className="flex items-center gap-2">
-                    <RotateCw className="w-4 h-4 stroke-[1.5px]" />
-                    Rotate PDF
-                  </span>
-                )}
-              </Button>
-            </div>
-          )}
-
-          {activeTool === "split" && (
-            <div className="flex flex-col gap-4">
-              <div>
-                <label className="text-xs font-semibold text-text-secondary pl-1 block mb-2">
-                  Pages to Extract
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. 1-3, 5, 8-10"
-                  value={splitPageRange}
-                  onChange={(e) => setSplitPageRange(e.target.value)}
-                  className="w-full h-12 px-4 bg-bg-surface-variant placeholder:text-text-muted/65 border border-transparent rounded-pill text-xs focus:outline-none focus:ring-2 focus:ring-accent-blue/30"
+          {/* Source Files list (scrollable so it never causes page-level overflow) */}
+          {files.length > 0 && (
+            <div className="flex flex-col gap-2 flex-1 overflow-hidden">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-text-secondary pl-1">
+                Source Files
+              </h3>
+              <div className="flex-1 overflow-y-auto pr-1 space-y-2">
+                <SourceFileList
+                  files={files}
+                  onRemove={handleRemoveFile}
+                  onAddSegment={handleAddSegment}
                 />
               </div>
-              <p className="text-[11px] text-text-muted leading-relaxed">
-                Select pages to pull from your primary document (e.g. &quot;1-5&quot; to save only the first five pages).
-              </p>
-              <Button
-                variant="primary"
-                onClick={executeSplit}
-                disabled={files.length === 0 || !splitPageRange || isProcessing}
-                className="w-full"
-              >
-                {isProcessing ? (
-                  <RefreshCw className="w-5 h-5 animate-spin" />
-                ) : (
-                  "Extract Pages"
-                )}
-              </Button>
-            </div>
-          )}
-
-          {activeTool === "numbers" && (
-            <div className="flex flex-col gap-4">
-              <p className="text-[11px] text-text-muted leading-relaxed">
-                Inserts clean, standard page number stamps (e.g., &quot;Page 1 of 5&quot;) at the bottom center footer of every page in your primary document.
-              </p>
-              <Button
-                variant="primary"
-                onClick={executeAddPageNumbers}
-                disabled={files.length === 0 || isProcessing}
-                className="w-full"
-              >
-                {isProcessing ? (
-                  <RefreshCw className="w-5 h-5 animate-spin" />
-                ) : (
-                  "Add Page Numbers"
-                )}
-              </Button>
             </div>
           )}
         </div>
-      </aside>
+
+        {/* Card 2: Tool Configuration & Actions */}
+        <div className="bg-bg-surface p-6 rounded-container border border-border-subtle/10 shadow-soft_elevation flex flex-col gap-4 flex-1 min-h-[350px] overflow-hidden">
+          {/* Tools Selector */}
+          <div className="flex flex-col gap-2 shrink-0">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-text-secondary pl-1">
+              Workspace Mode
+            </h3>
+            <div className="grid grid-cols-2 gap-2">
+              {(
+                [
+                  { id: "merge", label: "Merge & Sort" },
+                  { id: "rotate", label: "Rotate Pages" },
+                  { id: "split", label: "Extract Pages" },
+                  { id: "numbers", label: "Page Numbers" },
+                ] as const
+              ).map((tool) => (
+                <button
+                  key={tool.id}
+                  onClick={() => setActiveTool(tool.id)}
+                  className={`h-11 rounded-interactive text-xs font-medium transition-all duration-280 ${
+                    activeTool === tool.id
+                      ? "bg-accent-blue text-white shadow-sm"
+                      : "bg-bg-surface-variant text-text-secondary hover:text-text-primary hover:bg-bg-surface-variant/80"
+                  }`}
+                >
+                  {tool.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Action Panel based on mode */}
+          <div className="border-t border-border-subtle/10 pt-4 flex-1 flex flex-col min-h-0 overflow-y-auto">
+            {activeTool === "merge" && (
+              <div className="flex flex-col flex-1 gap-4 min-h-0">
+                <div className="flex items-center justify-between shrink-0">
+                  <h4 className="text-xs font-bold text-text-secondary uppercase tracking-wider">
+                    Sequence blocks
+                  </h4>
+                  <span className="text-[10px] bg-bg-surface-variant px-2 py-0.5 rounded font-mono">
+                    {segments.length}
+                  </span>
+                </div>
+                <div className="flex-1 overflow-y-auto pr-1 min-h-0">
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleDragEndSequence}
+                  >
+                    <SortableContext
+                      items={segments.map((s) => s.id)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      <div className="flex flex-col gap-2">
+                        {segments.map((segment) => (
+                          <SequenceItem
+                            key={segment.id}
+                            id={segment.id}
+                            fileName={
+                              files.find((f) => f.id === segment.fileId)?.file
+                                .name || "File Loading"
+                            }
+                            range={segment.range}
+                            onRangeChange={(val) =>
+                              handleSegmentRangeChange(segment.id, val)
+                            }
+                            onRemove={() => handleRemoveSegment(segment.id)}
+                          />
+                        ))}
+                      </div>
+                    </SortableContext>
+                  </DndContext>
+                  {segments.length === 0 && (
+                    <div className="p-4 text-center text-xs text-text-muted border border-dashed border-border-subtle rounded-interactive bg-bg-surface-variant/20">
+                      Import files above, then tap to add blocks to sequence.
+                    </div>
+                  )}
+                </div>
+                <Button
+                  variant="primary"
+                  onClick={executeMerge}
+                  disabled={virtualPages.length === 0 || isProcessing}
+                  className="w-full mt-auto shrink-0"
+                >
+                  {isProcessing ? (
+                    <RefreshCw className="w-5 h-5 animate-spin" />
+                  ) : (
+                    "Export Merged PDF"
+                  )}
+                </Button>
+              </div>
+            )}
+
+            {activeTool === "rotate" && (
+              <div className="flex flex-col gap-4">
+                <div>
+                  <label className="text-xs font-semibold text-text-secondary pl-1 block mb-2">
+                    Degrees
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {([90, 180, 270] as const).map((deg) => (
+                      <button
+                        key={deg}
+                        onClick={() => setRotationDegrees(deg)}
+                        className={`h-10 text-xs font-mono rounded-interactive border ${
+                          rotationDegrees === deg
+                            ? "border-accent-blue bg-accent-blue/10 text-accent-blue"
+                            : "border-border-subtle/20 bg-bg-surface-variant hover:bg-bg-surface-variant/80 text-text-primary"
+                        }`}
+                      >
+                        +{deg}°
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <p className="text-[11px] text-text-muted leading-relaxed">
+                  Applies {rotationDegrees}° rotation to all pages in your primary source document (first document uploaded).
+                </p>
+                <Button
+                  variant="primary"
+                  onClick={executeRotate}
+                  disabled={files.length === 0 || isProcessing}
+                  className="w-full mt-auto"
+                >
+                  {isProcessing ? (
+                    <RefreshCw className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <span className="flex items-center justify-center gap-2">
+                      <RotateCw className="w-4 h-4 stroke-[1.5px]" />
+                      Rotate PDF
+                    </span>
+                  )}
+                </Button>
+              </div>
+            )}
+
+            {activeTool === "split" && (
+              <div className="flex flex-col gap-4">
+                <div>
+                  <label className="text-xs font-semibold text-text-secondary pl-1 block mb-2">
+                    Pages to Extract
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 1-3, 5, 8-10"
+                    value={splitPageRange}
+                    onChange={(e) => setSplitPageRange(e.target.value)}
+                    className="w-full h-12 px-4 bg-bg-surface-variant placeholder:text-text-muted/65 border border-transparent rounded-pill text-xs focus:outline-none focus:ring-2 focus:ring-accent-blue/30"
+                  />
+                </div>
+                <p className="text-[11px] text-text-muted leading-relaxed">
+                  Select pages to pull from your primary document (e.g. &quot;1-5&quot; to save only the first five pages).
+                </p>
+                <Button
+                  variant="primary"
+                  onClick={executeSplit}
+                  disabled={files.length === 0 || !splitPageRange || isProcessing}
+                  className="w-full mt-auto"
+                >
+                  {isProcessing ? (
+                    <RefreshCw className="w-5 h-5 animate-spin" />
+                  ) : (
+                    "Extract Pages"
+                  )}
+                </Button>
+              </div>
+            )}
+
+            {activeTool === "numbers" && (
+              <div className="flex flex-col gap-4">
+                <p className="text-[11px] text-text-muted leading-relaxed">
+                  Inserts clean, standard page number stamps (e.g., &quot;Page 1 of 5&quot;) at the bottom center footer of every page in your primary document.
+                </p>
+                <Button
+                  variant="primary"
+                  onClick={executeAddPageNumbers}
+                  disabled={files.length === 0 || isProcessing}
+                  className="w-full mt-auto"
+                >
+                  {isProcessing ? (
+                    <RefreshCw className="w-5 h-5 animate-spin" />
+                  ) : (
+                    "Add Page Numbers"
+                  )}
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
 
       {/* Main Preview Workspace Grid */}
       <section className="flex-1 bg-bg-surface p-6 rounded-container border border-border-subtle/10 shadow-soft_elevation flex flex-col min-w-0">

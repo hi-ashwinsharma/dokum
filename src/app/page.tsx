@@ -2,18 +2,13 @@
 
 import React, { useState } from "react";
 import Workspace from "@/components/features/workspace/Workspace";
-import PluginRequestBoard from "@/components/features/requests/PluginRequestBoard";
-import AdminDashboard from "@/components/features/requests/AdminDashboard";
 import PhoneLogin from "@/components/features/auth/PhoneLogin";
 import { useAuth } from "@/components/providers/AuthProvider";
-import { Hammer, MessageSquare, ShieldAlert, LogIn, LogOut } from "lucide-react";
+import { LogIn, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-
-type ViewTab = "workspace" | "requests" | "admin";
 
 export default function Home() {
   const { user, logout } = useAuth();
-  const [activeTab, setActiveTab] = useState<ViewTab>("workspace");
   const [showAuthModal, setShowAuthModal] = useState(false);
 
   return (
@@ -30,43 +25,6 @@ export default function Home() {
               Dokum
             </span>
           </div>
-
-          {/* Navigation Links */}
-          <nav className="hidden md:flex items-center gap-1 bg-bg-surface-variant/40 p-1 rounded-pill">
-            <button
-              onClick={() => setActiveTab("workspace")}
-              className={`h-9 px-5 rounded-pill text-xs font-semibold flex items-center gap-1.5 transition-all duration-280 ${
-                activeTab === "workspace"
-                  ? "bg-bg-surface text-text-primary shadow-sm"
-                  : "text-text-secondary hover:text-text-primary"
-              }`}
-            >
-              <Hammer className="w-3.5 h-3.5 stroke-[1.5px]" />
-              <span>Workspace</span>
-            </button>
-            <button
-              onClick={() => setActiveTab("requests")}
-              className={`h-9 px-5 rounded-pill text-xs font-semibold flex items-center gap-1.5 transition-all duration-280 ${
-                activeTab === "requests"
-                  ? "bg-bg-surface text-text-primary shadow-sm"
-                  : "text-text-secondary hover:text-text-primary"
-              }`}
-            >
-              <MessageSquare className="w-3.5 h-3.5 stroke-[1.5px]" />
-              <span>Plugin Board</span>
-            </button>
-            <button
-              onClick={() => setActiveTab("admin")}
-              className={`h-9 px-5 rounded-pill text-xs font-semibold flex items-center gap-1.5 transition-all duration-280 ${
-                activeTab === "admin"
-                  ? "bg-bg-surface text-text-primary shadow-sm"
-                  : "text-text-secondary hover:text-text-primary"
-              }`}
-            >
-              <ShieldAlert className="w-3.5 h-3.5 stroke-[1.5px]" />
-              <span>Admin</span>
-            </button>
-          </nav>
         </div>
 
         {/* User Account Controls */}
@@ -97,42 +55,9 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Navigation Mobile Tabs */}
-      <div className="md:hidden flex items-center justify-around bg-bg-surface border-b border-border-subtle/10 px-4 py-2 shrink-0">
-        <button
-          onClick={() => setActiveTab("workspace")}
-          className={`flex flex-col items-center gap-0.5 text-[10px] font-bold ${
-            activeTab === "workspace" ? "text-accent-blue" : "text-text-secondary"
-          }`}
-        >
-          <Hammer className="w-5 h-5 stroke-[1.5px]" />
-          <span>Workspace</span>
-        </button>
-        <button
-          onClick={() => setActiveTab("requests")}
-          className={`flex flex-col items-center gap-0.5 text-[10px] font-bold ${
-            activeTab === "requests" ? "text-accent-blue" : "text-text-secondary"
-          }`}
-        >
-          <MessageSquare className="w-5 h-5 stroke-[1.5px]" />
-          <span>Plugin Board</span>
-        </button>
-        <button
-          onClick={() => setActiveTab("admin")}
-          className={`flex flex-col items-center gap-0.5 text-[10px] font-bold ${
-            activeTab === "admin" ? "text-accent-blue" : "text-text-secondary"
-          }`}
-        >
-          <ShieldAlert className="w-5 h-5 stroke-[1.5px]" />
-          <span>Admin</span>
-        </button>
-      </div>
-
       {/* Page Content Viewport */}
       <main className="flex-1 overflow-x-hidden">
-        {activeTab === "workspace" && <Workspace />}
-        {activeTab === "requests" && <PluginRequestBoard />}
-        {activeTab === "admin" && <AdminDashboard />}
+        <Workspace />
       </main>
 
       {/* Auth Modal */}
