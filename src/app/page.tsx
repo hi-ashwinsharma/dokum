@@ -23,6 +23,12 @@ export default function Home() {
   // Command palette state
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [commandSearch, setCommandSearch] = useState("");
+  const [selectedIndex, setSelectedIndex] = useState(0);
+
+  // Auto reset selection index when search query changes
+  useEffect(() => {
+    setSelectedIndex(0);
+  }, [commandSearch]);
 
   // Keyboard shortcut listener for Cmd+K
   useEffect(() => {
@@ -167,6 +173,22 @@ export default function Home() {
                 placeholder="Type a tool name or command..."
                 value={commandSearch}
                 onChange={(e) => setCommandSearch(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "ArrowDown") {
+                    e.preventDefault();
+                    setSelectedIndex((prev) => Math.min(filteredTools.length - 1, prev + 1));
+                  } else if (e.key === "ArrowUp") {
+                    e.preventDefault();
+                    setSelectedIndex((prev) => Math.max(0, prev - 1));
+                  } else if (e.key === "Enter") {
+                    e.preventDefault();
+                    if (filteredTools[selectedIndex]) {
+                      setActiveTool(filteredTools[selectedIndex].id as any);
+                      setShowCommandPalette(false);
+                      setCommandSearch("");
+                    }
+                  }
+                }}
                 className="flex-1 bg-transparent text-sm text-text-primary focus:outline-none placeholder:text-text-muted font-sans"
                 autoFocus
               />
@@ -179,7 +201,7 @@ export default function Home() {
             </div>
             
             <div className="max-h-[280px] overflow-y-auto p-2">
-              {filteredTools.map((t) => (
+              {filteredTools.map((t, index) => (
                 <button
                   key={t.id}
                   onClick={() => {
@@ -187,10 +209,14 @@ export default function Home() {
                     setShowCommandPalette(false);
                     setCommandSearch("");
                   }}
-                  className="w-full flex items-center justify-between text-left p-3 hover:bg-bg-surface-variant/80 rounded-interactive transition-all group"
+                  className={`w-full flex items-center justify-between text-left p-3 rounded-interactive transition-all group ${
+                    index === selectedIndex
+                      ? "bg-bg-surface-variant/90 border-l-2 border-accent-blue pl-2.5 text-accent-blue"
+                      : "hover:bg-bg-surface-variant/50 text-text-primary"
+                  }`}
                 >
                   <div>
-                    <div className="text-xs font-semibold text-text-primary">{t.label}</div>
+                    <div className="text-xs font-semibold">{t.label}</div>
                     <div className="text-[10px] text-text-muted mt-0.5">{t.desc}</div>
                   </div>
                   <kbd className="text-[9px] font-mono text-text-muted bg-bg-surface-variant/60 group-hover:bg-bg-surface px-1.5 py-0.5 rounded border border-border-subtle/10">
