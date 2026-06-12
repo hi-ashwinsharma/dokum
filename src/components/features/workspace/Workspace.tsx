@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useMemo } from "react";
+import React, { useState, useRef, useMemo, useEffect } from "react";
 import { PDFManager } from "@/services/pdf/pdfManager";
 import { PDFRenderer } from "@/services/pdf/pdfRenderer";
 import { PDFDocument } from 'pdf-lib';
@@ -14,7 +14,12 @@ import {
   FileUp, 
   RefreshCw, 
   RotateCw, 
-  FileCheck
+  FileCheck,
+  Search,
+  Scissors,
+  Hash,
+  X,
+  FileText
 } from "lucide-react";
 
 // Dnd Kit
@@ -57,12 +62,17 @@ interface VirtualPage {
   thumbnail?: string;
 }
 
-export default function Workspace() {
+export default function Workspace({ 
+  activeTool, 
+  setActiveTool 
+}: { 
+  activeTool: "merge" | "rotate" | "split" | "numbers"; 
+  setActiveTool: (tool: "merge" | "rotate" | "split" | "numbers") => void; 
+}) {
   const [files, setFiles] = useState<SourceFile[]>([]);
   const [segments, setSegments] = useState<MergeSegment[]>([]);
   const [thumbnails, setThumbnails] = useState<Map<string, string>>(new Map()); // Key: `${fileId}-${pageIndex}`
   const [isProcessing, setIsProcessing] = useState(false);
-  const [activeTool, setActiveTool] = useState<"merge" | "rotate" | "split" | "numbers">("merge");
   const [showRequestDrawer, setShowRequestDrawer] = useState(false);
   
   // States for other minor operations
@@ -196,9 +206,6 @@ export default function Workspace() {
     const newIndex = virtualPages.findIndex((p) => p.id === over.id);
 
     if (oldIndex !== -1 && newIndex !== -1) {
-      // Re-order segments to match page grid order if possible.
-      // DND re-ordering a flattened grid with multiple segments is best represented
-      // by converting the current flattened order into a new sequence of page segments.
       const newPageSequence = arrayMove(virtualPages, oldIndex, newIndex);
 
       // Re-create segments based on page sequence
@@ -261,7 +268,6 @@ export default function Workspace() {
     if (files.length === 0) return;
     setIsProcessing(true);
     try {
-      // Rotate the first file in source files list
       const sourceFile = files[0];
       const rotatedBytes = await PDFManager.rotatePDF(sourceFile.file, rotationDegrees);
       triggerDownload(rotatedBytes, `rotated_${sourceFile.file.name}`);
@@ -310,20 +316,37 @@ export default function Workspace() {
   };
 
   return (
-    <div className="flex flex-col lg:flex-row h-full min-h-[calc(100vh-80px)] gap-6 p-6">
+    <div className="flex flex-col lg:flex-row h-[calc(100vh-64px)] gap-3.5 p-3.5 overflow-hidden">
       {/* Split Sidebar Wrapper */}
-      <div className="w-full lg:w-80 shrink-0 flex flex-col gap-6 h-full relative">
+      <div className="w-full lg:w-80 shrink-0 flex flex-col gap-3.5 h-full overflow-hidden relative">
         {/* Card 1: Documents & Uploads */}
-        <div className="bg-bg-surface p-6 rounded-container border border-border-subtle/10 shadow-soft_elevation flex flex-col gap-4 max-h-[40vh] relative pt-8">
-          {/* Floating limited period badge */}
-          <div className="absolute -top-3 left-6 px-3 py-1 bg-accent-blue/15 text-accent-blue rounded-full text-[10px] font-bold font-mono border border-accent-blue/20">
-            FREE PERIOD ACTIVE
+        <div className="bg-bg-surface p-4 rounded-container border border-border-subtle/10 shadow-soft_elevation flex flex-col gap-3.5 max-h-[48%] overflow-hidden relative pt-6 shrink-0">
+
+          <div className="flex flex-col gap-1 min-h-0 flex-1 overflow-hidden">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-text-secondary pl-1 mb-1">
+              Imported Files
+            </h3>
+            
+            {/* Source Files list (scrollable) */}
+            {files.length > 0 ? (
+              <div className="flex-1 overflow-y-auto pr-1 min-h-0">
+                <SourceFileList
+                  files={files}
+                  onRemove={handleRemoveFile}
+                  onAddSegment={handleAddSegment}
+                />
+              </div>
+            ) : (
+              <div className="flex-1 flex flex-col items-center justify-center border border-dashed border-border-subtle rounded-interactive bg-bg-surface-variant/20 p-4 text-center">
+                <p className="text-[11px] text-text-muted leading-relaxed">
+                  No files imported. Click upload below to add files.
+                </p>
+              </div>
+            )}
           </div>
 
-          <div className="flex flex-col gap-2">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-text-secondary pl-1">
-              Import Documents
-            </h3>
+          {/* Upload Files Button in place of suggest plugin */}
+          <div className="shrink-0">
             <input
               type="file"
               multiple
@@ -335,52 +358,29 @@ export default function Workspace() {
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={isProcessing}
-              className="w-full h-14 border border-dashed border-border-subtle bg-bg-surface-variant/40 hover:bg-bg-surface-variant text-text-primary rounded-pill font-medium flex items-center justify-center gap-2.5 transition-all duration-280"
+              className="w-full h-11 border border-dashed border-border-subtle bg-bg-surface-variant/40 hover:bg-bg-surface-variant text-text-primary rounded-pill font-medium flex items-center justify-center gap-2 transition-all duration-280 text-xs shrink-0"
             >
-              <FileUp className="w-5 h-5 text-accent-blue stroke-[1.5px]" />
-              <span className="text-sm">Upload Files</span>
+              <FileUp className="w-4 h-4 text-accent-blue stroke-[1.5px]" />
+              <span>Upload Files</span>
             </button>
           </div>
-
-          {/* Source Files list (scrollable so it never causes page-level overflow) */}
-          {files.length > 0 && (
-            <div className="flex flex-col gap-2 flex-1 overflow-hidden">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-text-secondary pl-1">
-                Source Files
-              </h3>
-              <div className="flex-1 overflow-y-auto pr-1 space-y-2">
-                <SourceFileList
-                  files={files}
-                  onRemove={handleRemoveFile}
-                  onAddSegment={handleAddSegment}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Suggest a Plugin button */}
-          <button
-            onClick={() => setShowRequestDrawer(true)}
-            className="w-full h-11 border border-border-subtle bg-bg-surface hover:bg-bg-surface-variant text-text-secondary hover:text-text-primary rounded-pill font-medium text-xs flex items-center justify-center gap-1.5 transition-all duration-280 mt-auto shrink-0"
-          >
-            <span>Suggest a Plugin</span>
-          </button>
         </div>
 
         {/* Card 2: Tool Configuration & Actions */}
-        <div className="bg-bg-surface p-6 rounded-container border border-border-subtle/10 shadow-soft_elevation flex flex-col gap-4 flex-1 min-h-[350px] overflow-hidden">
+        <div className="bg-bg-surface p-4 rounded-container border border-border-subtle/10 shadow-soft_elevation flex flex-col gap-3 flex-1 min-h-0 overflow-hidden">
           {/* Action Panel based on mode */}
-          <div className="pt-2 flex-1 flex flex-col min-h-0 overflow-y-auto">
+          <div className="pt-1 flex-1 flex flex-col min-h-0 overflow-y-auto">
             {activeTool === "merge" && (
-              <div className="flex flex-col flex-1 gap-4 min-h-0">
+              <div className="flex flex-col flex-1 gap-3 min-h-0">
                 <div className="flex items-center justify-between shrink-0">
-                  <h4 className="text-xs font-bold text-text-secondary uppercase tracking-wider">
+                  <h4 className="text-xs font-bold text-text-secondary uppercase tracking-wider pl-1">
                     Sequence blocks
                   </h4>
                   <span className="text-[10px] bg-bg-surface-variant px-2 py-0.5 rounded font-mono">
                     {segments.length}
                   </span>
                 </div>
+                
                 <div className="flex-1 overflow-y-auto pr-1 min-h-0">
                   <DndContext
                     sensors={sensors}
@@ -391,22 +391,37 @@ export default function Workspace() {
                       items={segments.map((s) => s.id)}
                       strategy={verticalListSortingStrategy}
                     >
-                      <div className="flex flex-col gap-2">
-                        {segments.map((segment) => (
-                          <SequenceItem
-                            key={segment.id}
-                            id={segment.id}
-                            fileName={
-                              files.find((f) => f.id === segment.fileId)?.file
-                                .name || "File Loading"
-                            }
-                            range={segment.range}
-                            onRangeChange={(val) =>
-                              handleSegmentRangeChange(segment.id, val)
-                            }
-                            onRemove={() => handleRemoveSegment(segment.id)}
-                          />
-                        ))}
+                      <div className="flex flex-col gap-1.5">
+                        {segments.map((segment, index) => {
+                          // Android notifications group-rounding
+                          let roundClass = "rounded-interactive";
+                          if (segments.length === 1) {
+                            roundClass = "rounded-[20px]";
+                          } else if (index === 0) {
+                            roundClass = "rounded-t-[20px] rounded-b-[6px]";
+                          } else if (index === segments.length - 1) {
+                            roundClass = "rounded-b-[20px] rounded-t-[6px]";
+                          } else {
+                            roundClass = "rounded-[6px]";
+                          }
+
+                          return (
+                            <SequenceItem
+                              key={segment.id}
+                              id={segment.id}
+                              className={roundClass}
+                              fileName={
+                                files.find((f) => f.id === segment.fileId)?.file
+                                  .name || "File Loading"
+                              }
+                              range={segment.range}
+                              onRangeChange={(val) =>
+                                handleSegmentRangeChange(segment.id, val)
+                              }
+                              onRemove={() => handleRemoveSegment(segment.id)}
+                            />
+                          );
+                        })}
                       </div>
                     </SortableContext>
                   </DndContext>
@@ -416,14 +431,15 @@ export default function Workspace() {
                     </div>
                   )}
                 </div>
+                
                 <Button
                   variant="primary"
                   onClick={executeMerge}
                   disabled={virtualPages.length === 0 || isProcessing}
-                  className="w-full mt-auto shrink-0"
+                  className="w-full mt-auto shrink-0 h-11 text-xs"
                 >
                   {isProcessing ? (
-                    <RefreshCw className="w-5 h-5 animate-spin" />
+                    <RefreshCw className="w-4 h-4 animate-spin" />
                   ) : (
                     "Export Merged PDF"
                   )}
@@ -432,7 +448,7 @@ export default function Workspace() {
             )}
 
             {activeTool === "rotate" && (
-              <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-3.5 h-full">
                 <div>
                   <label className="text-xs font-semibold text-text-secondary pl-1 block mb-2">
                     Degrees
@@ -442,7 +458,7 @@ export default function Workspace() {
                       <button
                         key={deg}
                         onClick={() => setRotationDegrees(deg)}
-                        className={`h-10 text-xs font-mono rounded-interactive border ${
+                        className={`h-9 text-xs font-mono rounded-interactive border ${
                           rotationDegrees === deg
                             ? "border-accent-blue bg-accent-blue/10 text-accent-blue"
                             : "border-border-subtle/20 bg-bg-surface-variant hover:bg-bg-surface-variant/80 text-text-primary"
@@ -460,10 +476,10 @@ export default function Workspace() {
                   variant="primary"
                   onClick={executeRotate}
                   disabled={files.length === 0 || isProcessing}
-                  className="w-full mt-auto"
+                  className="w-full mt-auto h-11 text-xs shrink-0"
                 >
                   {isProcessing ? (
-                    <RefreshCw className="w-5 h-5 animate-spin" />
+                    <RefreshCw className="w-4 h-4 animate-spin" />
                   ) : (
                     <span className="flex items-center justify-center gap-2">
                       <RotateCw className="w-4 h-4 stroke-[1.5px]" />
@@ -475,7 +491,7 @@ export default function Workspace() {
             )}
 
             {activeTool === "split" && (
-              <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-3.5 h-full">
                 <div>
                   <label className="text-xs font-semibold text-text-secondary pl-1 block mb-2">
                     Pages to Extract
@@ -485,7 +501,7 @@ export default function Workspace() {
                     placeholder="e.g. 1-3, 5, 8-10"
                     value={splitPageRange}
                     onChange={(e) => setSplitPageRange(e.target.value)}
-                    className="w-full h-12 px-4 bg-bg-surface-variant placeholder:text-text-muted/65 border border-transparent rounded-pill text-xs focus:outline-none focus:ring-2 focus:ring-accent-blue/30"
+                    className="w-full h-11 px-4 bg-bg-surface-variant placeholder:text-text-muted/65 border border-transparent rounded-pill text-xs focus:outline-none focus:ring-2 focus:ring-accent-blue/30"
                   />
                 </div>
                 <p className="text-[11px] text-text-muted leading-relaxed">
@@ -495,10 +511,10 @@ export default function Workspace() {
                   variant="primary"
                   onClick={executeSplit}
                   disabled={files.length === 0 || !splitPageRange || isProcessing}
-                  className="w-full mt-auto"
+                  className="w-full mt-auto h-11 text-xs shrink-0"
                 >
                   {isProcessing ? (
-                    <RefreshCw className="w-5 h-5 animate-spin" />
+                    <RefreshCw className="w-4 h-4 animate-spin" />
                   ) : (
                     "Extract Pages"
                   )}
@@ -507,7 +523,7 @@ export default function Workspace() {
             )}
 
             {activeTool === "numbers" && (
-              <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-3.5 h-full">
                 <p className="text-[11px] text-text-muted leading-relaxed">
                   Inserts clean, standard page number stamps (e.g., &quot;Page 1 of 5&quot;) at the bottom center footer of every page in your primary document.
                 </p>
@@ -515,10 +531,10 @@ export default function Workspace() {
                   variant="primary"
                   onClick={executeAddPageNumbers}
                   disabled={files.length === 0 || isProcessing}
-                  className="w-full mt-auto"
+                  className="w-full mt-auto h-11 text-xs shrink-0"
                 >
                   {isProcessing ? (
-                    <RefreshCw className="w-5 h-5 animate-spin" />
+                    <RefreshCw className="w-4 h-4 animate-spin" />
                   ) : (
                     "Add Page Numbers"
                   )}
@@ -530,59 +546,30 @@ export default function Workspace() {
       </div>
 
       {/* Main Preview Workspace Grid */}
-      <section className="flex-1 bg-bg-surface p-6 rounded-container border border-border-subtle/10 shadow-soft_elevation flex flex-col min-w-0">
-        <div className="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b border-border-subtle/10 mb-6 gap-4">
+      <section className="flex-1 bg-bg-surface p-4 rounded-container border border-border-subtle/10 shadow-soft_elevation flex flex-col min-w-0 h-full overflow-hidden">
+        <div className="flex items-center justify-between pb-3 border-b border-border-subtle/10 mb-4 gap-4 shrink-0">
           <div>
-            <h2 className="text-lg font-bold text-text-primary flex items-center gap-2">
+            <h2 className="text-sm font-bold text-text-primary flex items-center gap-2">
               <span>Workspace Desk</span>
               {virtualPages.length > 0 && (
-                <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-bg-surface-variant font-bold text-text-secondary">
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-bg-surface-variant font-bold text-text-secondary">
                   {virtualPages.length} {virtualPages.length === 1 ? "Page" : "Pages"}
                 </span>
               )}
             </h2>
-            <p className="text-xs text-text-secondary mt-1">
-              Drag and drop layout blocks to reorganize your final document. Processing is 100% offline.
-            </p>
           </div>
 
-          <div className="flex items-center gap-3">
-            {/* Contextual Command Bar (shows only when files are imported) */}
-            {files.length > 0 && (
-              <div className="flex items-center bg-bg-surface-variant/60 p-1 rounded-pill border border-border-subtle/10">
-                {(
-                  [
-                    { id: "merge", label: "Merge" },
-                    { id: "rotate", label: "Rotate" },
-                    { id: "split", label: "Extract" },
-                    { id: "numbers", label: "Page Numbers" },
-                  ] as const
-                ).map((tool) => (
-                  <button
-                    key={tool.id}
-                    onClick={() => setActiveTool(tool.id)}
-                    className={`h-8 px-4 rounded-pill text-[11px] font-bold transition-all duration-280 ${
-                      activeTool === tool.id
-                        ? "bg-bg-surface text-accent-blue shadow-sm"
-                        : "text-text-secondary hover:text-text-primary"
-                    }`}
-                  >
-                    {tool.label}
-                  </button>
-                ))}
-              </div>
-            )}
-
+          <div className="flex items-center gap-2">
             {/* Free period label */}
-            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-pill bg-bg-surface-variant border border-border-subtle/10 text-xs text-text-secondary">
-              <FileCheck className="w-4 h-4 text-accent-blue stroke-[1.5px]" />
-              <span>Free Period Enabled</span>
+            <div className="flex items-center gap-1 px-2.5 py-1 rounded-pill bg-bg-surface-variant border border-border-subtle/10 text-[10px] text-text-secondary">
+              <FileCheck className="w-3.5 h-3.5 text-accent-blue stroke-[1.5px]" />
+              <span className="hidden sm:inline">Free Period Enabled</span>
             </div>
           </div>
         </div>
 
         {/* Content canvas */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto min-h-0">
           {virtualPages.length > 0 ? (
             <DndContext
               sensors={sensors}
@@ -593,7 +580,7 @@ export default function Workspace() {
                 items={virtualPages.map((p) => p.id)}
                 strategy={rectSortingStrategy}
               >
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3.5">
                   {virtualPages.map((page) => (
                     <PageItem
                       key={page.id}
@@ -602,7 +589,6 @@ export default function Workspace() {
                       pageNumber={page.pageIndex + 1}
                       thumbnailSrc={page.thumbnail}
                       onRemove={(id) => {
-                        // Find the segment representing this page
                         const parts = id.split("-");
                         const segmentId = parts[0];
                         const seg = segments.find((s) => s.id === segmentId);
@@ -611,7 +597,6 @@ export default function Workspace() {
                         const file = files.find((f) => f.id === seg.fileId);
                         if (!file) return;
 
-                        // Parse the range, remove this page, and reformat back to range string
                         const indices = parsePageRange(seg.range, file.pageCount);
                         const filteredIndices = indices.filter(
                           (idx) => idx !== page.pageIndex
@@ -620,7 +605,6 @@ export default function Workspace() {
                         if (filteredIndices.length === 0) {
                           handleRemoveSegment(segmentId);
                         } else {
-                          // Simple comma separated representation
                           const newRange = filteredIndices
                             .map((idx) => idx + 1)
                             .join(", ");
@@ -633,20 +617,20 @@ export default function Workspace() {
               </SortableContext>
             </DndContext>
           ) : (
-            <div className="flex flex-col items-center justify-center h-full min-h-[350px] border-2 border-dashed border-border-subtle/20 rounded-container p-8 text-center bg-bg-surface-variant/10">
-              <div className="h-16 w-16 rounded-full bg-accent-blue/10 flex items-center justify-center text-accent-blue mb-4">
-                <FileUp className="w-8 h-8 stroke-[1.25px]" />
+            <div className="flex flex-col items-center justify-center h-full min-h-[350px] border-2 border-dashed border-border-subtle/20 rounded-container p-6 text-center bg-bg-surface-variant/10">
+              <div className="h-14 w-14 rounded-full bg-accent-blue/10 flex items-center justify-center text-accent-blue mb-3">
+                <FileUp className="w-6 h-6 stroke-[1.25px]" />
               </div>
-              <h3 className="text-base font-bold text-text-primary mb-1">
+              <h3 className="text-sm font-bold text-text-primary mb-1">
                 Upload your files to begin
               </h3>
-              <p className="text-xs text-text-secondary max-w-sm leading-relaxed mb-6">
+              <p className="text-[11px] text-text-secondary max-w-xs leading-relaxed mb-4">
                 Drag and drop PDF files or images anywhere onto this workspace, or use the import button to load files.
               </p>
               <Button
                 variant="secondary"
                 onClick={() => fileInputRef.current?.click()}
-                className="h-12 px-6"
+                className="h-10 px-5 text-xs"
               >
                 Select Files
               </Button>
@@ -666,3 +650,4 @@ export default function Workspace() {
     </div>
   );
 }
+

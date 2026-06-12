@@ -12,9 +12,10 @@ interface SequenceItemProps {
   range: string;
   onRangeChange: (newRange: string) => void;
   onRemove: () => void;
+  className?: string;
 }
 
-export function SequenceItem({ id, fileName, range, onRangeChange, onRemove }: SequenceItemProps) {
+export function SequenceItem({ id, fileName, range, onRangeChange, onRemove, className }: SequenceItemProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
 
   const style = {
@@ -29,7 +30,8 @@ export function SequenceItem({ id, fileName, range, onRangeChange, onRemove }: S
       style={style}
       className={cn(
         "relative flex items-center gap-3 bg-bg-surface-variant/40 border border-border-subtle/10 p-4 transition-all duration-280 rounded-interactive",
-        isDragging && "shadow-soft_elevation ring-2 ring-accent-blue bg-bg-surface"
+        isDragging && "shadow-soft_elevation ring-2 ring-accent-blue bg-bg-surface",
+        className
       )}
     >
       <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-text-muted/60 hover:text-text-secondary p-1">
