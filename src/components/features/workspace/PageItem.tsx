@@ -33,7 +33,7 @@ export function PageItem({
 
   const style = {
     transform: CSS.Transform.toString(transform),
-    transition,
+    transition: isDragging ? "none" : transition,
     zIndex: isDragging ? 50 : "auto",
   };
 
@@ -52,18 +52,18 @@ export function PageItem({
       {...dragProps}
       onClick={handleContainerClick}
       className={cn(
-        "group relative flex aspect-[3/4] flex-col overflow-hidden rounded-component bg-bg-surface-variant border border-border-subtle/10 transition-all duration-280 hover:shadow-soft_elevation",
+        "group relative flex aspect-[3/4] flex-col overflow-hidden rounded-component bg-bg-surface-variant border border-border-subtle/10 transition-[box-shadow,opacity,background-color] duration-280 hover:shadow-soft_elevation",
         isDraggable ? "cursor-grab active:cursor-grabbing" : "cursor-pointer",
         isDragging && "opacity-50 ring-2 ring-accent-blue"
       )}
     >
-      <div className="relative flex-1 bg-bg-surface-variant/40 flex items-center justify-center overflow-hidden p-3.5">
+      <div className="relative flex-1 bg-bg-surface-variant/40 overflow-hidden">
         {thumbnailSrc ? (
           /* eslint-disable-next-line @next/next/no-img-element */
           <img 
             src={thumbnailSrc} 
             alt={`Page ${pageNumber}`} 
-            className="max-h-full max-w-full object-contain pointer-events-none rounded-sm shadow-sm border border-border-subtle/10" 
+            className="w-full h-full object-cover pointer-events-none" 
             draggable={false} 
           />
         ) : (

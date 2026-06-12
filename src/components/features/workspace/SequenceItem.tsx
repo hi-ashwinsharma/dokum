@@ -20,7 +20,7 @@ export function SequenceItem({ id, fileName, range, onRangeChange, onRemove, cla
 
   const style = {
     transform: CSS.Transform.toString(transform),
-    transition,
+    transition: isDragging ? "none" : transition,
     zIndex: isDragging ? 50 : "auto",
   };
 
@@ -29,7 +29,7 @@ export function SequenceItem({ id, fileName, range, onRangeChange, onRemove, cla
       ref={setNodeRef}
       style={style}
       className={cn(
-        "relative flex items-center gap-3 bg-bg-surface-variant/40 border border-border-subtle/10 p-4 transition-all duration-280 rounded-interactive",
+        "relative flex items-center gap-3 bg-bg-surface-variant/40 border border-border-subtle/10 p-4 transition-[box-shadow,opacity,background-color] duration-280 rounded-interactive",
         isDragging && "shadow-soft_elevation ring-2 ring-accent-blue bg-bg-surface",
         className
       )}
