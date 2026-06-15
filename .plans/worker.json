@@ -1,0 +1,35 @@
+{
+  "title": "Implement Web Workers for PDF Processing",
+  "description": "Offload CPU-intensive operations (PDF load, merge, assemble, split, stamp) from the main thread to Web Workers to ensure smooth UI responsiveness.",
+  "status": "planned",
+  "steps": [
+    {
+      "step": 1,
+      "task": "Create worker script",
+      "file": "src/services/pdf/pdf.worker.ts",
+      "details": "Import PDFManager and set up self.onmessage event listener to handle MERGE, SPLIT, ASSEMBLE, and NUMBER operations."
+    },
+    {
+      "step": 2,
+      "task": "Refactor PDFManager to receive transferable ArrayBuffers",
+      "file": "src/services/pdf/pdfManager.ts",
+      "details": "Ensure methods can accept raw ArrayBuffers/Uint8Arrays instead of File objects directly if needed, or parse them on the worker thread."
+    },
+    {
+      "step": 3,
+      "task": "Create worker wrapper client / React hook",
+      "file": "src/hooks/usePDFWorker.ts",
+      "details": "Implement a custom hook to instantiate the worker, send jobs, transfer ArrayBuffers, handle cleanups, and manage progress states."
+    },
+    {
+      "step": 4,
+      "task": "Integrate hook into Workspace component",
+      "file": "src/components/features/workspace/Workspace.tsx",
+      "details": "Replace direct static calls to PDFManager with the new worker hooks, updating loading indicators."
+    }
+  ],
+  "technicalNotes": {
+    "bundlerCompatibility": "Next.js 16 natively compiles Web Workers instantiated via: new Worker(new URL('./pdf.worker.ts', import.meta.url))",
+    "transferableObjects": "Transfer ArrayBuffer instances instead of copying them to avoid serialization overhead across threads."
+  }
+}

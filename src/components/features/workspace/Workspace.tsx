@@ -10,6 +10,9 @@ import { SequenceItem } from "./SequenceItem";
 import PluginRequestBoard from "@/components/features/requests/PluginRequestBoard";
 import { parsePageRange, pagesToRangeString } from "@/lib/pageParser";
 import { Button } from "@/components/ui/Button";
+import { CrossoverModal } from "@/components/ui/CrossoverModal";
+import NLPCommandBar from "./NLPCommandBar";
+
 import { 
   FileUp, 
   RefreshCw, 
@@ -78,8 +81,13 @@ export default function Workspace({
   const [isProcessing, setIsProcessing] = useState(false);
   const [showRequestDrawer, setShowRequestDrawer] = useState(false);
   
+  // Crossover modal states
+  const [crossoverOpen, setCrossoverOpen] = useState(false);
+  const [crossoverMessage, setCrossoverMessage] = useState("");
+  
   const [rotationDegrees, setRotationDegrees] = useState<90 | 180 | 270>(90);
   const [manualRanges, setManualRanges] = useState<Map<string, string>>(new Map());
+
   const [focusedFileId, setFocusedFileId] = useState<string | null>(null);
 
   // Split tool interactive states
@@ -148,6 +156,79 @@ export default function Workspace({
     });
     return pages;
   }, [files, thumbnails]);
+
+  const handleNLPCommandResponse = (response: any) => {
+    if (!response) return;
+
+    if (response.actionRequired && response.redirection === "pdf-studio") {
+      setCrossoverMessage(response.message || "perform multiple ops at the same time, in pdf studio");
+      setCrossoverOpen(true);
+      return;
+    }
+
+    if (response.commands && Array.isArray(response.commands)) {
+      const findFileFuzzy = (name: string) => {
+        if (!name) return undefined;
+        const query = name.toLowerCase().trim();
+        return files.find((f) => {
+          const fName = f.file.name.toLowerCase();
+          return fName === query || 
+                 fName.replace(/\.[^/.]+$/, "") === query.replace(/\.[^/.]+$/, "") ||
+                 fName.includes(query) || 
+                 query.includes(fName.replace(/\.[^/.]+$/, ""));
+        });
+      };
+
+      response.commands.forEach((cmd: any) => {
+        const targetFile = findFileFuzzy(cmd.fileName);
+
+        if (cmd.action === "rotate" && cmd.parameters?.angle) {
+          setRotationDegrees(cmd.parameters.angle);
+        }
+
+        if (cmd.action === "split" && targetFile && cmd.parameters?.pageRange) {
+          handleUpdateManualRange(targetFile.id, cmd.parameters.pageRange);
+        }
+
+        if (cmd.action === "merge") {
+          if (cmd.parameters?.segments && Array.isArray(cmd.parameters.segments)) {
+            const newSegments: MergeSegment[] = [];
+            cmd.parameters.segments.forEach((seg: any) => {
+              const file = findFileFuzzy(seg.fileName);
+              if (file) {
+                let range = String(seg.range);
+                if (range.toLowerCase() === "last") {
+                  range = `${file.pageCount}`;
+                }
+                newSegments.push({
+                  id: Math.random().toString(36).substr(2, 9),
+                  fileId: file.id,
+                  range,
+                });
+              }
+            });
+            if (newSegments.length > 0) {
+              setSegments(newSegments);
+            }
+          } else if (cmd.parameters?.mergeOrder) {
+            const order: string[] = cmd.parameters.mergeOrder;
+            setSegments((prev) => {
+              const sortedSegments: typeof prev = [];
+              order.forEach((fileName) => {
+                const file = files.find(f => f.file.name.toLowerCase() === fileName.toLowerCase());
+                if (file) {
+                  const fileSegments = prev.filter(s => s.fileId === file.id);
+                  sortedSegments.push(...fileSegments);
+                }
+              });
+              const remaining = prev.filter(s => !sortedSegments.some(ss => ss.id === s.id));
+              return [...sortedSegments, ...remaining];
+            });
+          }
+        }
+      });
+    }
+  };
 
   const handleAddPageToSplit = (page: VirtualPage) => {
     const newPage = {
@@ -741,15 +822,18 @@ export default function Workspace({
             )}
           </div>
         </div>
-      </div>      {/* Main Preview Workspace Grid / Split Desk Cards */}
-      {activeTool === "split" ? (
+      </div>
+      {/* Main Preview Workspace Grid / Split Desk Cards */}
+      <div className="flex-1 flex flex-col gap-3.5 h-full min-w-0">
+        {activeTool === "split" ? (
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
           onDragEnd={handleDragEndSplit}
         >
-          {/* Card A: Source Pages */}
-          <div className="flex-1 bg-bg-surface p-4 rounded-container border border-border-subtle/10 shadow-soft_elevation flex flex-col min-w-0 h-full overflow-hidden relative">
+          <div className="flex-1 flex flex-col md:flex-row gap-3.5 min-h-0">
+            {/* Card A: Source Pages */}
+            <div className="flex-1 bg-bg-surface p-4 rounded-container border border-border-subtle/10 shadow-soft_elevation flex flex-col min-w-0 h-full overflow-hidden relative">
             <div className="flex items-center justify-between pb-3 border-b border-border-subtle/10 mb-4 gap-4 shrink-0">
               <h2 className="text-sm font-bold text-text-primary flex items-center gap-2">
                 <span>Source Pages</span>
@@ -846,6 +930,7 @@ export default function Workspace({
                 <Trash2 className="w-4 h-4 stroke-[2px]" />
               </button>
             )}
+          </div>
           </div>
         </DndContext>
       ) : (
@@ -952,6 +1037,26 @@ export default function Workspace({
           </div>
         </div>
       )}
+
+      {/* NLP Command Bar */}
+      <NLPCommandBar
+        files={files}
+        activeTool={activeTool}
+        onCommandResponse={handleNLPCommandResponse}
+      />
+      </div>
+
+      {/* Crossover Redirection Modal */}
+      <CrossoverModal
+        isOpen={crossoverOpen}
+        message={crossoverMessage}
+        onProceed={() => {
+          setCrossoverOpen(false);
+          // Future navigation route to PDF Studio
+          alert("Navigating to PDF Studio...");
+        }}
+        onCancel={() => setCrossoverOpen(false)}
+      />
     </div>
   );
 }

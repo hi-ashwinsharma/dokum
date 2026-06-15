@@ -1,0 +1,47 @@
+{
+  "title": "PDF Studio and NLP Action Bar Specification",
+  "routing": {
+    "crossover": {
+      "trigger": "User requests multiple operations or operations unsupported by the active single-purpose tool.",
+      "action": "Open a full-screen, smooth fade-in modal (nearly opaque background) presenting the message: 'Perform multiple ops at the same time, in pdf studio'.",
+      "controls": {
+        "proceed": "Navigates to PDF Studio and preserves loaded files in global or context state.",
+        "cancel": "Closes the modal and remains in the current tool."
+      }
+    }
+  },
+  "api": {
+    "architecture": "Next.js App Router Route Handler (POST /api/nlp)",
+    "sdk": "Google Gen AI API using system instructions to enforce structured JSON output.",
+    "payload": {
+      "prompt": "User input text (e.g. 'delete the first page of report.pdf')",
+      "activeTool": "Current route/tool ('merge', 'rotate', etc.)",
+      "files": "Array of { name: string, pageCount: number } currently in workspace"
+    },
+    "response": {
+      "type": "Object",
+      "schema": {
+        "actionRequired": "boolean (true if redirection/suggestion is needed)",
+        "redirection": "null | 'pdf-studio'",
+        "message": "string (e.g., 'Perform multiple ops at the same time, in pdf studio')",
+        "commands": "Array of { action: 'rotate'|'delete'|'merge'|'split'|'number', fileName: string, parameters: object }"
+      }
+    }
+  },
+  "studio": {
+    "path": "src/components/studio/PDFStudio.tsx",
+    "layout": {
+      "leftPanel": "Uploaded file list & layout inspector",
+      "centerPanel": "Interactive client-side PDF document preview pages (using pdfjs-dist)",
+      "rightPanel": "Action options and configuration panels",
+      "bottomBar": "Unified NLP input command bar"
+    },
+    "features": [
+      "Merge multiple documents",
+      "Split / extract ranges",
+      "Rotate pages (90/180/270 degrees)",
+      "Delete pages",
+      "Stamp page numbers (header/footer)"
+    ]
+  }
+}

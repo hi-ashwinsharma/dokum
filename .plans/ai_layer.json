@@ -1,0 +1,29 @@
+{
+  "title": "Dokum AI Layer Integration Plan",
+  "possibilities": [
+    {
+      "feature": "Smart PDF Assistant (Chat-with-PDF)",
+      "description": "A sidebar to interact with document context (Q&A, summary, key terms extraction).",
+      "implementation": "Use client-side text extraction (pdf.js) + a lightweight Gemini API / Firebase AI Logic call via Route Handlers."
+    },
+    {
+      "feature": "Natural Language PDF Operations",
+      "description": "Execute tasks like merging, rotating, or splitting using chat prompt commands.",
+      "example": "Prompt: 'Extract only pages with charts (pages 3 and 5)' -> AI parses range -> calls PDFManager.splitPDF."
+    },
+    {
+      "feature": "Intelligent Request Triage (Admin Dashboard)",
+      "description": "Auto-categorize, summarize, and flag duplicate user-submitted plugin requests in the Admin Dashboard."
+    }
+  ],
+  "requirements": [
+    {
+      "category": "API & Key Management",
+      "details": "Setup Google Gemini API key securely in environment variables (NEXT_PUBLIC_ prefixed keys should be avoided for AI models to prevent abuse)."
+    },
+    {
+      "category": "Local-First Text Extraction",
+      "details": "Integrate PDF text extraction inside the browser using pdf.js to minimize server upload sizes."
+    }
+  ]
+}
